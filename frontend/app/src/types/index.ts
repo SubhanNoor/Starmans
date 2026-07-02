@@ -93,7 +93,7 @@ export interface Payment {
   clientId: string;
   clientName: string;
   clientPhone: string;
-  method: 'Cash' | 'Bank Transfer' | 'Cheque' | 'Online';
+  method: 'Cash' | 'Cheque' | 'Online' | 'Slip';
   amount: number;
   desc: string;
   collectionDate?: string;

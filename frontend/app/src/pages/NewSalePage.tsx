@@ -198,7 +198,7 @@ export default function NewSalePage() {
           {/* Header row */}
           <div
             className="grid gap-3 px-5 py-3 soleria-table-header"
-            style={{ gridTemplateColumns: '2fr 48px 120px 180px 100px 30px', background: 'var(--app-bg)' }}
+            style={{ gridTemplateColumns: '210px 48px 120px 180px 100px 30px', background: 'var(--app-bg)' }}
           >
             <span>Article</span>
 <span style={{ justifySelf: "start" }}>Qty</span>
@@ -217,7 +217,7 @@ export default function NewSalePage() {
             const stockExceeded = Boolean(article && requestedArticleQty > article.stock);
             return (
               <div key={idx} className="soleria-table-row">
-                <div className="grid gap-3 px-5 py-3 items-start" style={{ gridTemplateColumns: '2fr 48px 120px 180px 100px 30px' }}>
+                <div className="grid gap-3 px-5 py-3 items-start" style={{ gridTemplateColumns: '210px 48px 120px 180px 100px 30px' }}>
                   {/* Article select */}
                   <div>
                     <select

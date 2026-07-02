@@ -3,7 +3,7 @@ import { useApp } from '@/context/AppContext';
 import {
   ShoppingCart, Receipt, Factory, Package, FileText,
   FlaskConical, Calculator, TrendingUp, CreditCard,
-  ChevronDown, LogOut, Lock
+  ChevronDown, LogOut, Lock, Menu, X
 } from 'lucide-react';
 
 const navItems = [
@@ -27,6 +27,7 @@ interface AppLayoutProps {
 export default function AppLayout({ children, pageTitle, headerAction }: AppLayoutProps) {
   const { state, dispatch } = useApp();
   const [showAdminPopup, setShowAdminPopup] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,9 +40,14 @@ export default function AppLayout({ children, pageTitle, headerAction }: AppLayo
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [state.currentPage]);
+
   function navigate(page: string) {
     dispatch({ type: 'NAVIGATE', page });
     setShowAdminPopup(false);
+    setSidebarOpen(false);
   }
 
   const currentPage = state.currentPage;
@@ -55,35 +61,52 @@ export default function AppLayout({ children, pageTitle, headerAction }: AppLayo
 
   return (
     <div className="flex h-screen w-full overflow-hidden" style={{ background: 'var(--app-bg)' }}>
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="app-sidebar-overlay"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <aside
         data-no-print
-        className="flex flex-col flex-shrink-0"
+        className={`app-sidebar flex flex-col flex-shrink-0${sidebarOpen ? ' app-sidebar-open' : ''}`}
         style={{ width: 248, background: 'var(--brand-navy)' }}
       >
         {/* Logo Block */}
         <div className="px-5 pt-6 pb-4">
-          <div className="flex items-center gap-3">
-            <div
-              className="flex items-center justify-center flex-shrink-0"
-              style={{
-                width: 38, height: 38, borderRadius: 9,
-                background: 'var(--brand-gold)'
-              }}
-            >
-              <span className="font-lora font-bold text-xl" style={{ color: 'var(--brand-navy)' }}>S</span>
-            </div>
-            <div>
-              <div className="font-lora font-semibold text-lg tracking-wide" style={{ color: '#ffffff' }}>
-                SOLERIA
-              </div>
+          <div className="flex items-center gap-3 justify-between">
+            <div className="flex items-center gap-3">
               <div
-                className="text-xs font-inter tracking-widest uppercase"
-                style={{ color: 'var(--brand-gold)', letterSpacing: '1.6px', fontSize: '10.5px' }}
+                className="flex items-center justify-center flex-shrink-0"
+                style={{
+                  width: 38, height: 38, borderRadius: 9,
+                  background: 'var(--brand-gold)'
+                }}
               >
-                Sole House
+                <span className="font-lora font-bold text-xl" style={{ color: 'var(--brand-navy)' }}>S</span>
+              </div>
+              <div>
+                <div className="font-lora font-semibold text-lg tracking-wide" style={{ color: '#ffffff' }}>
+                  STARMANS
+                </div>
+                <div
+                  className="text-xs font-inter tracking-widest uppercase"
+                  style={{ color: 'var(--brand-gold)', letterSpacing: '1.6px', fontSize: '10.5px' }}
+                >
+                  Sole House
+                </div>
               </div>
             </div>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="sidebar-close-btn"
+              aria-label="Close menu"
+            >
+              <X size={20} color="#ffffff" />
+            </button>
           </div>
         </div>
 
@@ -184,21 +207,28 @@ export default function AppLayout({ children, pageTitle, headerAction }: AppLayo
         {/* Header */}
         <header
           data-no-print
-          className="flex items-center gap-4 px-8 flex-shrink-0"
+          className="app-header flex items-center gap-4 px-8 flex-shrink-0"
           style={{
             height: 66,
             background: 'var(--app-bg)',
             borderBottom: '1px solid var(--border-color)'
           }}
         >
-          <div className="flex items-center gap-4 flex-1">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="hamburger-btn"
+            aria-label="Open menu"
+          >
+            <Menu size={22} color="var(--dark-heading)" />
+          </button>
+          <div className="flex items-center gap-4 flex-1 min-w-0">
             {/* Brand mark */}
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1 brand-mark">
               <span
                 className="font-lora uppercase tracking-widest"
                 style={{ fontSize: '12.5px', letterSpacing: '2.5px', color: 'var(--brand-navy)' }}
               >
-                SOLERIA
+                STARMANS
               </span>
               <div
                 className="h-0.5 w-12 solera-pulse rounded-full"
@@ -206,10 +236,10 @@ export default function AppLayout({ children, pageTitle, headerAction }: AppLayo
               />
             </div>
             {/* Divider */}
-            <div style={{ width: 1, height: 26, background: 'var(--border-color)' }} />
+            <div className="brand-mark" style={{ width: 1, height: 26, background: 'var(--border-color)' }} />
             {/* Page title */}
             <h1
-              className="font-lora font-semibold capitalize"
+              className="font-lora font-semibold capitalize truncate"
               style={{ fontSize: '24px', color: 'var(--dark-heading)' }}
             >
               {pageTitle}
@@ -221,8 +251,8 @@ export default function AppLayout({ children, pageTitle, headerAction }: AppLayo
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-auto" style={{ padding: 32 }}>
-          <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+        <main className="app-main flex-1 overflow-auto" style={{ padding: 32 }}>
+          <div className="app-main-inner" style={{ maxWidth: 1100, margin: '0 auto' }}>
             {children}
           </div>
         </main>

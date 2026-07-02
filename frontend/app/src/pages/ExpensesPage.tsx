@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useApp, formatCurrency, isDateInCurrentWeek, isDateInCurrentMonth } from '@/context/AppContext';
+import { useApp, formatCurrency, isDateInCurrentWeek, isDateInCurrentMonth, getCurrentWeekStart, getCurrentWeekEnd } from '@/context/AppContext';
 import AppLayout from '@/components/AppLayout';
 import { Plus, Printer } from 'lucide-react';
 
@@ -10,6 +10,7 @@ export default function ExpensesPage() {
   const [activeTab, setActiveTab] = useState<TabType>('new');
   const [entries, setEntries] = useState([{ desc: '', price: 0 }]);
   const [successMsg, setSuccessMsg] = useState('');
+  const [filterText, setFilterText] = useState('');
 
   const runningTotal = entries.reduce((s, e) => s + (e.price || 0), 0);
 
@@ -69,19 +70,18 @@ export default function ExpensesPage() {
             <div className="card-white">
               <div className="grid gap-3 px-5 py-3 soleria-table-header" style={{ gridTemplateColumns: '1fr 140px 36px', background: 'var(--app-bg)' }}>
                 <span>Description</span>
-                <span className="text-right">Amount</span>
+                <span className="text-right">Amount (Rs)</span>
                 <span />
               </div>
               {entries.map((entry, idx) => (
                 <div key={idx} className="grid gap-3 px-5 py-2.5 items-center soleria-table-row" style={{ gridTemplateColumns: '1fr 140px 36px' }}>
-                  <input type="text" value={entry.desc} onChange={e => updateEntry(idx, { desc: e.target.value })} placeholder="Description" className="soleria-input" />
-                  <input type="number" min={0} value={entry.price || ''} onChange={e => updateEntry(idx, { price: parseInt(e.target.value) || 0 })} className="soleria-input text-right" />
+                  <input type="text" value={entry.desc} onChange={e => updateEntry(idx, { desc: e.target.value })} placeholder="e.g. Shop Rent" className="soleria-input" />
+                  <input type="number" min={0} value={entry.price || ''} onChange={e => updateEntry(idx, { price: parseInt(e.target.value) || 0 })} placeholder="0" className="soleria-input text-right" />
                   {entries.length > 1 && <button onClick={() => removeEntry(idx)} style={{ color: 'var(--error)' }}>&times;</button>}
                 </div>
               ))}
-              <div className="px-5 py-3 flex items-center justify-between">
-                <button onClick={addEntry} className="btn-dashed flex items-center gap-1 text-xs"><Plus size={14} /> Add Expense</button>
-                <span className="font-lora font-semibold" style={{ fontSize: '18px', color: 'var(--brand-gold)' }}>{formatCurrency(runningTotal)}</span>
+              <div className="px-5 py-3">
+                <button onClick={addEntry} className="btn-dashed flex items-center gap-1 text-sm"><Plus size={14} /> Add Expense</button>
               </div>
             </div>
             <div className="mt-4 flex justify-end">
@@ -90,47 +90,104 @@ export default function ExpensesPage() {
           </>
         )}
 
-        {activeTab === 'weekly' && <ReportView expenses={weeklyExpenses} title="Weekly Expenses" />}
-        {activeTab === 'monthly' && <ReportView expenses={monthlyExpenses} title="Monthly Expenses" />}
-        {activeTab === 'alltime' && <ReportView expenses={state.expenses} title="All Time Expenses" />}
+        {activeTab === 'weekly' && (
+          <ReportView
+            expenses={weeklyExpenses}
+            title="Weekly Expenses"
+            subtitle={`${getCurrentWeekStart().toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })} – ${getCurrentWeekEnd().toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}`}
+            emptyText="No expenses recorded this week."
+            filterText={filterText}
+            setFilterText={setFilterText}
+          />
+        )}
+        {activeTab === 'monthly' && (
+          <ReportView
+            expenses={monthlyExpenses}
+            title="Monthly Expenses"
+            subtitle={new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            emptyText="No expenses recorded this month."
+            filterText={filterText}
+            setFilterText={setFilterText}
+          />
+        )}
+        {activeTab === 'alltime' && (
+          <ReportView
+            expenses={state.expenses}
+            title="All Time Expenses"
+            subtitle="Complete expense history"
+            emptyText="No expenses recorded."
+            grandTotal
+            filterText={filterText}
+            setFilterText={setFilterText}
+          />
+        )}
       </div>
     </AppLayout>
   );
 }
 
-function ReportView({ expenses, title }: { expenses: any[]; title: string }) {
-  const total = expenses.reduce((s, e) => s + e.rows.reduce((rs: number, r: any) => rs + r.price, 0), 0);
+function ReportView({ expenses, title, subtitle, emptyText, grandTotal, filterText, setFilterText }: {
+  expenses: any[];
+  title: string;
+  subtitle?: string;
+  emptyText?: string;
+  grandTotal?: boolean;
+  filterText: string;
+  setFilterText: (s: string) => void;
+}) {
+  const filtered = expenses.filter(e => {
+    if (!filterText) return true;
+    const q = filterText.toLowerCase();
+    const dateLabel = new Date(e.date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).toLowerCase();
+    const descMatch = e.rows.some((r: any) => r.desc.toLowerCase().includes(q));
+    return e.date.toLowerCase().includes(q) || dateLabel.includes(q) || descMatch;
+  });
+  const total = filtered.reduce((s, e) => s + e.rows.reduce((rs: number, r: any) => rs + r.price, 0), 0);
   return (
-    <div className="card-white">
-      <div className="px-6 py-4" style={{ borderBottom: '2px solid var(--border-section)' }}>
-        <h3 className="font-lora font-semibold" style={{ fontSize: '18px', color: 'var(--dark-heading)' }}>{title}</h3>
+    <>
+      <div className="mb-4" style={{ maxWidth: 380 }}>
+        <input
+          type="text"
+          value={filterText}
+          onChange={e => setFilterText(e.target.value)}
+          placeholder="Filter by month, date, or description..."
+          className="soleria-input"
+          style={{ fontSize: '14px', width: '100%' }}
+        />
       </div>
-      {expenses.map(expense => {
-        const expTotal = expense.rows.reduce((s: number, r: any) => s + r.price, 0);
-        return (
-          <div key={expense.id} className="px-6 py-3 soleria-table-row">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-inter font-medium" style={{ fontSize: '13px', color: 'var(--secondary-text)' }}>
-                {new Date(expense.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} at {expense.time}
-              </span>
-              <span className="font-lora font-semibold" style={{ fontSize: '14px', color: 'var(--brand-gold)' }}>{formatCurrency(expTotal)}</span>
-            </div>
-            {expense.rows.map((row: any, idx: number) => (
-              <div key={idx} className="flex items-center justify-between py-1" style={{ borderTop: idx > 0 ? '1px solid var(--border-table)' : 'none' }}>
-                <span className="font-inter" style={{ fontSize: '13px', color: 'var(--primary-text)' }}>{row.desc}</span>
-                <span className="font-inter" style={{ fontSize: '13px', color: 'var(--primary-text)' }}>{formatCurrency(row.price)}</span>
+      <div className="card-white">
+        <div className="px-6 py-4" style={{ borderBottom: '2px solid var(--border-section)' }}>
+          <h3 className="font-lora font-semibold" style={{ fontSize: '20px', color: 'var(--dark-heading)' }}>{title}</h3>
+          {subtitle && <p className="font-inter mt-1" style={{ fontSize: '14px', color: 'var(--secondary-text)' }}>{subtitle}</p>}
+        </div>
+        {filtered.map(expense => {
+          const expTotal = expense.rows.reduce((s: number, r: any) => s + r.price, 0);
+          return (
+            <div key={expense.id} className="px-6 py-3 soleria-table-row">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-inter font-medium" style={{ fontSize: '14px', color: 'var(--secondary-text)' }}>
+                  {new Date(expense.date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })} · {expense.time}
+                </span>
+                <span className="font-lora font-semibold" style={{ fontSize: '16px', color: 'var(--brand-gold)' }}>{formatCurrency(expTotal)}</span>
               </div>
-            ))}
+              {expense.rows.map((row: any, idx: number) => (
+                <div key={idx} className="flex items-center justify-between py-1">
+                  <span className="font-inter font-medium" style={{ fontSize: '15px', color: 'var(--dark-heading)' }}>{row.desc}</span>
+                  <span className="font-inter font-medium" style={{ fontSize: '15px', color: 'var(--dark-heading)' }}>{formatCurrency(row.price)}</span>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+        {filtered.length === 0 ? (
+          <div className="px-6 py-8 text-center font-inter" style={{ fontSize: '15px', color: 'var(--muted-text)' }}>{expenses.length === 0 ? (emptyText || 'No expenses found.') : 'No expenses match your filter.'}</div>
+        ) : (
+          <div className="flex items-center justify-between px-6 py-4" style={{ borderTop: '2px solid var(--border-section)' }}>
+            <span className="font-inter uppercase font-semibold tracking-wider" style={{ fontSize: '13px', color: 'var(--secondary-text)', letterSpacing: '0.6px' }}>{grandTotal ? 'Grand Total' : 'Total Expenses'}</span>
+            <span className="font-lora font-semibold" style={{ fontSize: '28px', color: 'var(--brand-gold)' }}>{formatCurrency(total)}</span>
           </div>
-        );
-      })}
-      {expenses.length === 0 && (
-        <div className="px-6 py-8 text-center font-inter" style={{ color: 'var(--muted-text)' }}>No expenses found.</div>
-      )}
-      <div className="flex items-center justify-between px-6 py-4" style={{ borderTop: '2px solid var(--border-section)' }}>
-        <span className="font-inter font-semibold" style={{ fontSize: '13px', color: 'var(--dark-heading)' }}>Total Expenses</span>
-        <span className="font-lora font-semibold" style={{ fontSize: '26px', color: 'var(--brand-gold)' }}>{formatCurrency(total)}</span>
+        )}
       </div>
-    </div>
+    </>
   );
 }

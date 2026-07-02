@@ -86,6 +86,18 @@ export default function ProfitPage() {
     return { operating: opExp, bills: utilBills, chemical: chemCost };
   }, [state, analyticsMonth, analyticsYear]);
 
+  const analyticsMonthlyGross = useMemo(() => {
+    return state.clients.flatMap(c => c.slips)
+      .filter(s => isDateInMonth(s.date, analyticsMonth, analyticsYear))
+      .reduce((sum, s) => sum + s.total, 0);
+  }, [state, analyticsMonth, analyticsYear]);
+
+  const analyticsAnnualGross = useMemo(() => {
+    return state.clients.flatMap(c => c.slips)
+      .filter(s => new Date(s.date).getFullYear() === analyticsYear)
+      .reduce((sum, s) => sum + s.total, 0);
+  }, [state, analyticsYear]);
+
   const analyticsAnnual = useMemo(() => {
     const opExp = state.expenses.filter(e => new Date(e.date).getFullYear() === analyticsYear)
       .reduce((s, e) => s + e.rows.reduce((rs, r) => rs + r.price, 0), 0);
@@ -96,22 +108,27 @@ export default function ProfitPage() {
     return { operating: opExp, bills: utilBills, chemical: chemCost };
   }, [state, analyticsYear]);
 
-  function renderPieSVG(data: { operating: number; bills: number; chemical: number }, size: number = 200) {
-    const total = data.operating + data.bills + data.chemical;
-    if (total === 0) return <div className="text-center py-8 font-inter" style={{ color: 'var(--muted-text)' }}>No data</div>;
+  function getSlices(data: { operating: number; bills: number; chemical: number }) {
+    return [
+      { value: data.operating, color: EXPENSE_COLORS.operating, label: 'Operating Expenses' },
+      { value: data.bills, color: EXPENSE_COLORS.bills, label: 'Utility Bills' },
+      { value: data.chemical, color: EXPENSE_COLORS.chemical, label: 'Chemical' },
+    ];
+  }
 
-    const radius = size / 2 - 10;
+  function renderPieOnly(data: { operating: number; bills: number; chemical: number }, size: number = 180) {
+    const total = data.operating + data.bills + data.chemical;
+    const radius = size / 2 - 4;
     const cx = size / 2;
     const cy = size / 2;
 
-    const slices = [
-      { value: data.operating, color: EXPENSE_COLORS.operating, label: 'Operating' },
-      { value: data.bills, color: EXPENSE_COLORS.bills, label: 'Bills' },
-      { value: data.chemical, color: EXPENSE_COLORS.chemical, label: 'Chemical' },
-    ];
+    if (total === 0) {
+      return <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}><circle cx={cx} cy={cy} r={radius} fill="var(--border-table)" /></svg>;
+    }
 
+    const slices = getSlices(data);
     let currentAngle = -Math.PI / 2;
-    const paths = slices.map((slice, i) => {
+    const paths = slices.filter(s => s.value > 0).map((slice, i) => {
       const angle = (slice.value / total) * Math.PI * 2;
       const x1 = cx + radius * Math.cos(currentAngle);
       const y1 = cy + radius * Math.sin(currentAngle);
@@ -123,17 +140,23 @@ export default function ProfitPage() {
       return <path key={i} d={d} fill={slice.color} stroke="white" strokeWidth={2} />;
     });
 
+    return <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>{paths}</svg>;
+  }
+
+  function renderLegend(data: { operating: number; bills: number; chemical: number }) {
+    const total = data.operating + data.bills + data.chemical;
+    const slices = getSlices(data).filter(s => s.value > 0);
     return (
-      <div className="flex flex-col items-center">
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>{paths}</svg>
-        <div className="flex flex-wrap gap-3 mt-3 justify-center">
-          {slices.map((s, i) => (
-            <div key={i} className="flex items-center gap-1.5">
-              <div className="rounded-full" style={{ width: 10, height: 10, background: s.color }} />
-              <span className="font-inter" style={{ fontSize: '11px', color: 'var(--secondary-text)' }}>{s.label}</span>
+      <div className="flex flex-col gap-3">
+        {slices.map((s, i) => (
+          <div key={i} className="flex items-start gap-2">
+            <div className="rounded-sm mt-1" style={{ width: 12, height: 12, background: s.color, flexShrink: 0 }} />
+            <div>
+              <p className="font-inter font-semibold" style={{ fontSize: '14px', color: 'var(--dark-heading)' }}>{s.label}</p>
+              <p className="font-inter" style={{ fontSize: '13px', color: 'var(--secondary-text)' }}>{formatCurrency(s.value)} · {Math.round((s.value / total) * 100)}%</p>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     );
   }
@@ -159,38 +182,66 @@ export default function ProfitPage() {
 
         {activeTab === 'monthly' && (
           <>
-            <div className="flex items-center gap-2 mb-4">
-              <button onClick={() => setSelectedMonth(m => Math.max(0, m - 1))} className="btn-outline text-xs px-2 py-1">&larr;</button>
-              <span className="font-lora font-semibold" style={{ fontSize: '16px', color: 'var(--dark-heading)' }}>
+            <div className="flex flex-col items-center gap-3 mb-6">
+              <span className="font-lora font-semibold" style={{ fontSize: '22px', color: 'var(--dark-heading)' }}>
                 {getMonthName(selectedMonth)} {selectedYear}
               </span>
-              <button onClick={() => setSelectedMonth(m => Math.min(11, m + 1))} className="btn-outline text-xs px-2 py-1">&rarr;</button>
+              <div className="flex items-center gap-3">
+                <button onClick={() => setSelectedMonth(m => { if (m === 0) { setSelectedYear(y => y - 1); return 11; } return m - 1; })} className="btn-outline" style={{ width: 36, height: 36 }}>&larr;</button>
+                <input
+                  type="month"
+                  value={`${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`}
+                  onChange={e => {
+                    const [y, m] = e.target.value.split('-').map(Number);
+                    if (y && m) { setSelectedYear(y); setSelectedMonth(m - 1); }
+                  }}
+                  className="soleria-input"
+                  style={{ width: 180 }}
+                />
+                <button onClick={() => setSelectedMonth(m => { if (m === 11) { setSelectedYear(y => y + 1); return 0; } return m + 1; })} className="btn-outline" style={{ width: 36, height: 36 }}>&rarr;</button>
+              </div>
             </div>
 
-            <div className="card-white p-6 space-y-4">
-              <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--border-table)' }}>
-                <span className="font-inter" style={{ fontSize: '14px', color: 'var(--primary-text)' }}>Gross Sales</span>
-                <span className="font-lora font-semibold" style={{ fontSize: '18px', color: 'var(--dark-heading)' }}>{formatCurrency(grossSales)}</span>
+            <div className="card-white p-6" style={{ maxWidth: 620, margin: '0 auto' }}>
+              <h3 className="font-lora font-semibold" style={{ fontSize: '22px', color: 'var(--dark-heading)' }}>Monthly Profit Report</h3>
+              <p className="font-inter mt-1" style={{ fontSize: '14px', color: 'var(--secondary-text)' }}>{getMonthName(selectedMonth)} {selectedYear}</p>
+              <div style={{ borderBottom: '2px solid var(--border-section)', margin: '16px 0' }} />
+
+              <div className="flex justify-between items-start py-3" style={{ borderBottom: '1px solid var(--border-table)' }}>
+                <div>
+                  <p className="font-inter uppercase font-semibold tracking-wider" style={{ fontSize: '12px', color: 'var(--secondary-text)', letterSpacing: '0.6px' }}>Gross Sales</p>
+                  <p className="font-inter mt-1" style={{ fontSize: '14px', color: 'var(--secondary-text)' }}>Total revenue for the month</p>
+                </div>
+                <span className="font-lora font-semibold" style={{ fontSize: '24px', color: 'var(--dark-heading)' }}>{formatCurrency(grossSales)}</span>
               </div>
-              <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--border-table)' }}>
-                <span className="font-inter" style={{ fontSize: '14px', color: 'var(--secondary-text)' }}>Operating Expenses</span>
-                <span className="font-inter" style={{ fontSize: '14px', color: 'var(--error)' }}>-{formatCurrency(operatingExpenses)}</span>
+
+              <div className="pt-4">
+                <p className="font-inter uppercase font-semibold tracking-wider mb-2" style={{ fontSize: '12px', color: 'var(--secondary-text)', letterSpacing: '0.6px' }}>Expenses</p>
+                <div className="flex justify-between items-center py-2">
+                  <span className="font-inter font-medium" style={{ fontSize: '15px', color: 'var(--dark-heading)' }}>Operating Expenses</span>
+                  <span className="font-inter" style={{ fontSize: '15px', color: 'var(--dark-heading)' }}>{formatCurrency(operatingExpenses)}</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="font-inter font-medium" style={{ fontSize: '15px', color: 'var(--dark-heading)' }}>Utility Bills</span>
+                  <span className="font-inter" style={{ fontSize: '15px', color: 'var(--dark-heading)' }}>{formatCurrency(utilityBills)}</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="font-inter font-medium" style={{ fontSize: '15px', color: 'var(--dark-heading)' }}>Chemical</span>
+                  <span className="font-inter" style={{ fontSize: '15px', color: 'var(--dark-heading)' }}>{formatCurrency(chemicalCosts)}</span>
+                </div>
               </div>
-              <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--border-table)' }}>
-                <span className="font-inter" style={{ fontSize: '14px', color: 'var(--secondary-text)' }}>Utility Bills</span>
-                <span className="font-inter" style={{ fontSize: '14px', color: 'var(--error)' }}>-{formatCurrency(utilityBills)}</span>
+
+              <div className="flex justify-between items-center py-3" style={{ borderTop: '1px solid var(--border-table)', marginTop: 8 }}>
+                <span className="font-inter font-semibold" style={{ fontSize: '15px', color: 'var(--dark-heading)' }}>Total Expenses</span>
+                <span className="font-inter font-semibold" style={{ fontSize: '15px', color: 'var(--dark-heading)' }}>{formatCurrency(totalExpenses)}</span>
               </div>
-              <div className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid var(--border-table)' }}>
-                <span className="font-inter" style={{ fontSize: '14px', color: 'var(--secondary-text)' }}>Chemical Costs</span>
-                <span className="font-inter" style={{ fontSize: '14px', color: 'var(--error)' }}>-{formatCurrency(chemicalCosts)}</span>
-              </div>
-              <div className="flex justify-between items-center py-3" style={{ borderTop: '2px solid var(--border-section)' }}>
-                <span className="font-inter font-semibold" style={{ fontSize: '14px', color: 'var(--dark-heading)' }}>Total Expenses</span>
-                <span className="font-lora font-semibold" style={{ fontSize: '18px', color: 'var(--error)' }}>{formatCurrency(totalExpenses)}</span>
-              </div>
-              <div className="flex justify-between items-center py-3" style={{ borderTop: '2px solid var(--border-section)' }}>
-                <span className="font-inter font-semibold" style={{ fontSize: '16px', color: 'var(--dark-heading)' }}>Net Profit</span>
-                <span className="font-lora font-semibold" style={{ fontSize: '32px', color: netProfit >= 0 ? 'var(--success)' : 'var(--error)' }}>
+
+              <div className="flex justify-between items-end pt-5" style={{ borderTop: '2px solid var(--border-section)', marginTop: 8 }}>
+                <div>
+                  <p className="font-inter uppercase font-semibold tracking-wider" style={{ fontSize: '12px', color: 'var(--secondary-text)', letterSpacing: '0.6px' }}>Net Profit</p>
+                  <p className="font-inter mt-1" style={{ fontSize: '14px', color: 'var(--secondary-text)' }}>Gross Sales – Total Expenses</p>
+                </div>
+                <span className="font-lora font-semibold" style={{ fontSize: '36px', color: 'var(--brand-gold)' }}>
                   {formatCurrency(netProfit)}
                 </span>
               </div>
@@ -200,30 +251,38 @@ export default function ProfitPage() {
 
         {activeTab === 'annual' && (
           <>
-            <div className="flex items-center gap-2 mb-4">
-              <input type="number" value={selectedYear} onChange={e => setSelectedYear(parseInt(e.target.value))} className="soleria-input" style={{ width: 100, fontSize: '14px' }} />
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <button onClick={() => setSelectedYear(y => y - 1)} className="btn-outline" style={{ width: 36, height: 36 }}>&larr;</button>
+              <div className="card-white flex items-center justify-center font-lora font-semibold" style={{ width: 140, height: 42, fontSize: '20px', color: 'var(--dark-heading)' }}>
+                {selectedYear}
+              </div>
+              <button onClick={() => setSelectedYear(y => y + 1)} className="btn-outline" style={{ width: 36, height: 36 }}>&rarr;</button>
             </div>
 
-            <div className="card-white">
-              <div className="grid gap-4 px-6 py-3 soleria-table-header" style={{ gridTemplateColumns: '130px 1fr 1fr 1fr', background: 'var(--app-bg)' }}>
+            <div className="card-white p-6" style={{ maxWidth: 620, margin: '0 auto' }}>
+              <h3 className="font-lora font-semibold" style={{ fontSize: '22px', color: 'var(--dark-heading)' }}>Annual Profit Report</h3>
+              <p className="font-inter mt-1" style={{ fontSize: '14px', color: 'var(--secondary-text)' }}>{selectedYear}</p>
+              <div style={{ borderBottom: '2px solid var(--border-section)', margin: '16px 0' }} />
+
+              <div className="grid gap-4 py-2 soleria-table-header" style={{ gridTemplateColumns: '110px 1fr 1fr 1fr' }}>
                 <span>Month</span>
                 <span className="text-right">Gross Sales</span>
                 <span className="text-right">Expenses</span>
                 <span className="text-right">Net Profit</span>
               </div>
               {annualData.map(d => (
-                <div key={d.month} className="grid gap-4 px-6 py-3 soleria-table-row items-center" style={{ gridTemplateColumns: '130px 1fr 1fr 1fr' }}>
-                  <span className="font-inter font-medium" style={{ fontSize: '14px', color: 'var(--primary-text)' }}>{getMonthName(d.month)}</span>
-                  <span className="text-right font-inter" style={{ fontSize: '13px', color: 'var(--primary-text)' }}>{formatCurrency(d.sales)}</span>
-                  <span className="text-right font-inter" style={{ fontSize: '13px', color: 'var(--error)' }}>{formatCurrency(d.expenses)}</span>
-                  <span className="text-right font-lora font-semibold" style={{ fontSize: '14px', color: d.net >= 0 ? 'var(--success)' : 'var(--error)' }}>{formatCurrency(d.net)}</span>
+                <div key={d.month} className="grid gap-4 py-3 items-center soleria-table-row" style={{ gridTemplateColumns: '110px 1fr 1fr 1fr' }}>
+                  <span className="font-inter font-medium" style={{ fontSize: '15px', color: 'var(--primary-text)' }}>{getMonthName(d.month).slice(0, 3)}</span>
+                  <span className="text-right font-inter" style={{ fontSize: '15px', color: 'var(--dark-heading)' }}>{formatCurrency(d.sales)}</span>
+                  <span className="text-right font-inter" style={{ fontSize: '15px', color: 'var(--dark-heading)' }}>{formatCurrency(d.expenses)}</span>
+                  <span className="text-right font-lora font-semibold" style={{ fontSize: '15px', color: d.net > 0 ? 'var(--brand-gold)' : d.net < 0 ? 'var(--error)' : 'var(--dark-heading)' }}>{formatCurrency(d.net)}</span>
                 </div>
               ))}
-              <div className="grid gap-4 px-6 py-4 items-center" style={{ gridTemplateColumns: '130px 1fr 1fr 1fr', borderTop: '2px solid var(--border-section)' }}>
-                <span className="font-inter font-semibold" style={{ fontSize: '14px', color: 'var(--dark-heading)' }}>Year Total</span>
-                <span className="text-right font-lora font-semibold" style={{ fontSize: '14px', color: 'var(--brand-gold)' }}>{formatCurrency(yearTotalSales)}</span>
-                <span className="text-right font-lora font-semibold" style={{ fontSize: '14px', color: 'var(--error)' }}>{formatCurrency(yearTotalExpenses)}</span>
-                <span className="text-right font-lora font-semibold" style={{ fontSize: '16px', color: yearNetProfit >= 0 ? 'var(--success)' : 'var(--error)' }}>{formatCurrency(yearNetProfit)}</span>
+              <div className="grid gap-4 py-4 items-center" style={{ gridTemplateColumns: '110px 1fr 1fr 1fr', borderTop: '2px solid var(--border-section)' }}>
+                <span className="font-inter uppercase font-semibold tracking-wider" style={{ fontSize: '12px', color: 'var(--secondary-text)', letterSpacing: '0.6px' }}>Total</span>
+                <span className="text-right font-lora font-semibold" style={{ fontSize: '19px', color: 'var(--dark-heading)' }}>{formatCurrency(yearTotalSales)}</span>
+                <span className="text-right font-lora font-semibold" style={{ fontSize: '19px', color: 'var(--dark-heading)' }}>{formatCurrency(yearTotalExpenses)}</span>
+                <span className="text-right font-lora font-semibold" style={{ fontSize: '19px', color: yearNetProfit > 0 ? 'var(--brand-gold)' : yearNetProfit < 0 ? 'var(--error)' : 'var(--dark-heading)' }}>{formatCurrency(yearNetProfit)}</span>
               </div>
             </div>
           </>
@@ -231,43 +290,70 @@ export default function ProfitPage() {
 
         {activeTab === 'analytics' && (
           <>
-            <div className="flex items-center gap-3 mb-6">
-              <select value={analyticsYear} onChange={e => setAnalyticsYear(parseInt(e.target.value))} className="soleria-input" style={{ width: 100, fontSize: '13px' }}>
-                {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
-              <select value={analyticsMonth} onChange={e => setAnalyticsMonth(parseInt(e.target.value))} className="soleria-input" style={{ width: 140, fontSize: '13px' }}>
-                {Array.from({ length: 12 }, (_, i) => (
-                  <option key={i} value={i}>{getMonthName(i)}</option>
-                ))}
-              </select>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="flex items-center gap-2">
+                <label className="font-inter font-semibold" style={{ fontSize: '13px', color: 'var(--dark-heading)' }}>Year</label>
+                <select value={analyticsYear} onChange={e => setAnalyticsYear(parseInt(e.target.value))} className="soleria-input" style={{ width: 100, fontSize: '13px' }}>
+                  {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="font-inter font-semibold" style={{ fontSize: '13px', color: 'var(--dark-heading)' }}>Month</label>
+                <select value={analyticsMonth} onChange={e => setAnalyticsMonth(parseInt(e.target.value))} className="soleria-input" style={{ width: 140, fontSize: '13px' }}>
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <option key={i} value={i}>{getMonthName(i)}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
-              <div className="card-white p-6">
-                <h4 className="font-lora font-semibold text-center mb-4" style={{ fontSize: '16px', color: 'var(--dark-heading)' }}>
-                  Monthly Breakdown — {getMonthName(analyticsMonth)} {analyticsYear}
-                </h4>
-                {renderPieSVG(analyticsMonthly)}
-                <div className="text-center mt-4">
-                  <span className="font-inter" style={{ fontSize: '12px', color: 'var(--secondary-text)' }}>Net Profit/Loss</span>
-                  <p className="font-lora font-semibold" style={{ fontSize: '20px', color: (Object.values(analyticsMonthly).reduce((s: number, v: number) => s + v, 0)) >= 0 ? 'var(--success)' : 'var(--error)' }}>
-                    {formatCurrency(state.clients.flatMap(c => c.slips).filter(s => isDateInMonth(s.date, analyticsMonth, analyticsYear)).reduce((s, sl) => s + sl.total, 0) - Object.values(analyticsMonthly).reduce((s: number, v: number) => s + v, 0))}
-                  </p>
+            {(() => {
+              const monthlyExpTotal = analyticsMonthly.operating + analyticsMonthly.bills + analyticsMonthly.chemical;
+              const monthlyNet = analyticsMonthlyGross - monthlyExpTotal;
+              const annualExpTotal = analyticsAnnual.operating + analyticsAnnual.bills + analyticsAnnual.chemical;
+              const annualNet = analyticsAnnualGross - annualExpTotal;
+              return (
+                <div className="flex flex-col gap-6">
+                  <div className="card-white p-6">
+                    <h4 className="font-lora font-semibold" style={{ fontSize: '18px', color: 'var(--dark-heading)' }}>
+                      Monthly Breakdown — {getMonthName(analyticsMonth).slice(0, 3)} {analyticsYear}
+                    </h4>
+                    <p className="font-inter mt-1" style={{ fontSize: '13px', color: 'var(--secondary-text)' }}>
+                      Gross sales {formatCurrency(analyticsMonthlyGross)} — expense breakdown
+                    </p>
+                    <div className="flex items-center gap-8 mt-6">
+                      {renderPieOnly(analyticsMonthly)}
+                      {monthlyExpTotal === 0 ? (
+                        <span className="font-inter" style={{ fontSize: '14px', color: 'var(--muted-text)' }}>No sales recorded this month.</span>
+                      ) : renderLegend(analyticsMonthly)}
+                    </div>
+                    <div className="flex justify-between items-center pt-4 mt-4" style={{ borderTop: '1px solid var(--border-table)' }}>
+                      <span className="font-inter uppercase font-semibold tracking-wider" style={{ fontSize: '11px', color: 'var(--secondary-text)', letterSpacing: '0.6px' }}>Net Profit</span>
+                      <span className="font-lora font-semibold" style={{ fontSize: '22px', color: 'var(--brand-gold)' }}>{formatCurrency(monthlyNet)}</span>
+                    </div>
+                  </div>
+
+                  <div className="card-white p-6">
+                    <h4 className="font-lora font-semibold" style={{ fontSize: '18px', color: 'var(--dark-heading)' }}>
+                      Annual Breakdown — {analyticsYear}
+                    </h4>
+                    <p className="font-inter mt-1" style={{ fontSize: '13px', color: 'var(--secondary-text)' }}>
+                      Gross sales {formatCurrency(analyticsAnnualGross)} — expense breakdown
+                    </p>
+                    <div className="flex items-center gap-8 mt-6">
+                      {renderPieOnly(analyticsAnnual)}
+                      {annualExpTotal === 0 ? (
+                        <span className="font-inter" style={{ fontSize: '14px', color: 'var(--muted-text)' }}>No expenses recorded this year.</span>
+                      ) : renderLegend(analyticsAnnual)}
+                    </div>
+                    <div className="flex justify-between items-center pt-4 mt-4" style={{ borderTop: '1px solid var(--border-table)' }}>
+                      <span className="font-inter uppercase font-semibold tracking-wider" style={{ fontSize: '11px', color: 'var(--secondary-text)', letterSpacing: '0.6px' }}>Net Profit</span>
+                      <span className="font-lora font-semibold" style={{ fontSize: '22px', color: 'var(--brand-gold)' }}>{formatCurrency(annualNet)}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="card-white p-6">
-                <h4 className="font-lora font-semibold text-center mb-4" style={{ fontSize: '16px', color: 'var(--dark-heading)' }}>
-                  Annual Breakdown — {analyticsYear}
-                </h4>
-                {renderPieSVG(analyticsAnnual)}
-                <div className="text-center mt-4">
-                  <span className="font-inter" style={{ fontSize: '12px', color: 'var(--secondary-text)' }}>Net Profit/Loss</span>
-                  <p className="font-lora font-semibold" style={{ fontSize: '20px', color: 'var(--success)' }}>
-                    {formatCurrency(state.clients.flatMap(c => c.slips).filter(s => new Date(s.date).getFullYear() === analyticsYear).reduce((s, sl) => s + sl.total, 0) - Object.values(analyticsAnnual).reduce((s: number, v: number) => s + v, 0))}
-                  </p>
-                </div>
-              </div>
-            </div>
+              );
+            })()}
           </>
         )}
       </div>

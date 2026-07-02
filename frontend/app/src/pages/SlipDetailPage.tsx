@@ -50,7 +50,7 @@ export default function SlipDetailPage() {
           <div className="flex justify-between items-start" style={{ borderBottom: '2px solid var(--border-section)', paddingBottom: 16 }}>
             <div>
               <h2 className="font-lora font-semibold" style={{ fontSize: '24px', color: 'var(--dark-heading)' }}>
-                SOLERIA
+                STARMANS
               </h2>
               <p
                 className="font-inter uppercase tracking-wider mt-0.5"

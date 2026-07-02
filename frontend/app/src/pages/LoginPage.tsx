@@ -19,11 +19,11 @@ export default function LoginPage() {
 
   return (
     <div
-      className="flex items-center justify-center min-h-screen"
+      className="flex items-center justify-center min-h-screen login-page-outer"
       style={{ background: 'var(--app-bg)' }}
     >
       <div
-        className="flex w-full overflow-hidden"
+        className="flex w-full overflow-hidden login-card"
         style={{
           maxWidth: 960,
           minHeight: 480,
@@ -33,7 +33,7 @@ export default function LoginPage() {
       >
         {/* Left branded panel */}
         <div
-          className="relative flex flex-col justify-between overflow-hidden"
+          className="relative flex flex-col justify-between overflow-hidden login-brand-panel"
           style={{
             flex: '0 0 50%',
             background: 'var(--brand-navy)',
@@ -56,12 +56,12 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="relative" style={{ zIndex: 2 }}>
+          <div className="relative login-brand-copy" style={{ zIndex: 2 }}>
             <h2
               className="font-lora font-semibold"
               style={{ fontSize: '30px', color: '#ffffff', lineHeight: 1.22 }}
             >
-              Soleria<br />Sole House
+              Starmans<br />Sole House
             </h2>
             <div
               className="mt-4 rounded-full"
@@ -107,7 +107,7 @@ export default function LoginPage() {
 
         {/* Right panel - form */}
         <div
-          className="flex flex-col justify-center"
+          className="flex flex-col justify-center login-form-panel"
           style={{
             flex: '0 0 50%',
             background: '#ffffff',
