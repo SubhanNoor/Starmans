@@ -1,0 +1,317 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Soleria Brand Colors */
+    --brand-navy: #1B2A41;
+    --brand-gold: #B08D57;
+    --brand-gold-hover: #9c7a47;
+    --brand-navy-hover: #223350;
+    --app-bg: #FAF8F3;
+    --card-surface: #ffffff;
+    --alt-surface: #F5F3EE;
+    --primary-text: #2B2B2B;
+    --secondary-text: #86847c;
+    --muted-text: #a6a49c;
+    --dark-heading: #1B2A41;
+    --gold-text: #B08D57;
+    --error: #B3401F;
+    --success: #3F7D58;
+    --border-color: #E3E0D8;
+    --border-table: #F0EDE6;
+    --border-section: #1B2A41;
+    --sidebar-sep: rgba(255,255,255,0.08);
+
+    /* shadcn overrides */
+    --background: 40 33% 97%;
+    --foreground: 0 0% 17%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 17%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 17%;
+    --primary: 216 40% 18%;
+    --primary-foreground: 40 33% 97%;
+    --secondary: 40 14% 95%;
+    --secondary-foreground: 216 40% 18%;
+    --muted: 40 14% 95%;
+    --muted-foreground: 43 5% 52%;
+    --accent: 37 37% 52%;
+    --accent-foreground: 216 40% 18%;
+    --destructive: 14 71% 41%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 37 14% 87%;
+    --input: 37 14% 87%;
+    --ring: 37 37% 52%;
+    --radius: 0.625rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    color: var(--primary-text);
+    background: var(--app-bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer components {
+  .font-lora {
+    font-family: 'Lora', serif;
+  }
+
+  .font-inter {
+    font-family: 'Inter', sans-serif;
+  }
+
+  /* Input focus state */
+  .soleria-input {
+    @apply border rounded-md px-3 py-2 text-sm outline-none transition-all;
+    border-color: var(--border-color);
+    background: var(--card-surface);
+    color: var(--dark-heading);
+    font-family: 'Inter', sans-serif;
+  }
+
+  .soleria-input:focus {
+    border-color: var(--brand-gold);
+    box-shadow: 0 0 0 3px rgba(176,141,87,0.15);
+  }
+
+  /* Hide native number input spinners so narrow columns (Qty/Price/Discount) stay aligned */
+  .soleria-input[type='number']::-webkit-outer-spin-button,
+  .soleria-input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .soleria-input[type='number'] {
+    -moz-appearance: textfield;
+  }
+
+  /* Gold button */
+  .btn-gold {
+    @apply px-7 py-2.5 rounded-lg font-semibold text-sm transition-colors;
+    background: var(--brand-gold);
+    color: var(--brand-navy);
+    font-family: 'Inter', sans-serif;
+  }
+
+  .btn-gold:hover {
+    background: var(--brand-gold-hover);
+  }
+
+  .btn-gold:disabled {
+    background: var(--border-color);
+    color: #9b988f;
+    cursor: not-allowed;
+  }
+
+  /* Navy button */
+  .btn-navy {
+    @apply px-5 py-2 rounded-lg font-semibold text-sm transition-colors;
+    background: var(--brand-navy);
+    color: var(--app-bg);
+    font-family: 'Inter', sans-serif;
+  }
+
+  .btn-navy:hover {
+    background: var(--brand-navy-hover);
+  }
+
+  /* Dashed outline button */
+  .btn-dashed {
+    @apply px-4 py-2 rounded-md font-semibold text-sm transition-colors border border-dashed;
+    border-color: #C9C4B8;
+    color: var(--brand-navy);
+    background: transparent;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .btn-dashed:hover {
+    border-color: var(--brand-gold);
+    color: var(--brand-gold);
+  }
+
+  /* Dark outline button */
+  .btn-outline {
+    @apply px-4 py-2 rounded-md font-semibold text-sm transition-colors border;
+    border-color: var(--brand-navy);
+    color: var(--brand-navy);
+    background: transparent;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .btn-outline:hover {
+    background: rgba(27,42,65,0.06);
+  }
+
+  /* Danger button */
+  .btn-danger {
+    @apply px-5 py-2 rounded-lg font-semibold text-sm transition-colors border;
+    border-color: var(--border-color);
+    color: var(--error);
+    background: transparent;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .btn-danger:hover {
+    background: #FBF1ED;
+    border-color: var(--error);
+  }
+
+  /* White card container */
+  .card-white {
+    background: var(--card-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  /* Table styles */
+  .soleria-table-header {
+    @apply text-xs font-semibold uppercase tracking-wider;
+    color: var(--secondary-text);
+    letter-spacing: 0.6px;
+  }
+
+  .soleria-table-row {
+    border-bottom: 1px solid var(--border-table);
+  }
+
+  /* Tab pill container */
+  .tab-pill-container {
+    @apply inline-flex border rounded-lg overflow-hidden;
+    border-color: var(--border-color);
+  }
+
+  .tab-pill-active {
+    @apply px-4 py-2 text-sm font-semibold border-none cursor-pointer;
+    background: var(--brand-navy);
+    color: var(--app-bg);
+    font-family: 'Inter', sans-serif;
+  }
+
+  .tab-pill-inactive {
+    @apply px-4 py-2 text-sm font-medium border-none cursor-pointer;
+    background: var(--card-surface);
+    color: var(--brand-navy);
+    font-family: 'Inter', sans-serif;
+  }
+
+  .tab-pill-inactive:hover {
+    background: var(--alt-surface);
+  }
+
+  /* Success banner */
+  .banner-success {
+    background: #EEF4EF;
+    border: 1px solid #cfe0d4;
+    color: var(--success);
+  }
+
+  /* Error banner */
+  .banner-error {
+    background: #FBF1ED;
+    border: 1px solid #E8C5B8;
+    color: var(--error);
+  }
+
+  /* Info banner */
+  .banner-info {
+    background: var(--card-surface);
+    border: 1px solid var(--brand-gold);
+    border-left: 3px solid var(--brand-gold);
+    color: var(--brand-navy);
+  }
+
+  /* Verified banner */
+  .banner-verified {
+    background: #F0F7F3;
+    border: 1px solid #B8DFC9;
+    color: var(--success);
+  }
+
+  /* Discount toggle pill */
+  .discount-toggle-active {
+    border: none;
+    font: 600 11px 'Inter', sans-serif;
+    padding: 0;
+    width: 32px;
+    height: 30px;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+    background: var(--brand-gold);
+    color: var(--brand-navy);
+  }
+
+  .discount-toggle-inactive {
+    border: none;
+    font: 600 11px 'Inter', sans-serif;
+    padding: 0;
+    width: 32px;
+    height: 30px;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+    background: var(--alt-surface);
+    color: var(--secondary-text);
+  }
+
+  /* Method/tag pill */
+  .tag-pill {
+    @apply px-2.5 py-0.5 rounded-full text-xs font-medium;
+    background: var(--alt-surface);
+    color: var(--brand-navy);
+    border: 1px solid var(--border-color);
+  }
+
+  /* Solera pulse animation */
+  @keyframes solera-pulse {
+    0%, 100% { opacity: 0.45; transform: scaleX(0.8); }
+    50% { opacity: 1; transform: scaleX(1); }
+  }
+
+  .solera-pulse {
+    animation: solera-pulse 2.8s ease-in-out infinite;
+    transform-origin: left;
+  }
+}
+
+/* Responsive: stack client name/phone instead of squeezing side-by-side */
+.client-fields-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+@media (max-width: 560px) {
+  .client-fields-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Print styles */
+@media print {
+  [data-no-print] {
+    display: none !important;
+  }
+
+  body, html {
+    background: #ffffff !important;
+  }
+
+  main {
+    padding: 8px !important;
+  }
+
+  @page {
+    margin: 8mm;
+  }
+}
