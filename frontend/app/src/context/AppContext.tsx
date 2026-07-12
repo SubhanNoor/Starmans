@@ -167,7 +167,7 @@ export function useApp() {
 /* ──────────────────── helpers ──────────────────── */
 
 export function formatCurrency(value: number): string {
-  return '\u20A8 ' + value.toLocaleString('en-US');
+  return '\u20A8 ' + Math.round(value).toLocaleString('en-US');
 }
 
 export function getCurrentWeekStart(): Date {

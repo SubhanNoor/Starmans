@@ -86,16 +86,38 @@ router.get('/', async (req, res) => {
 // POST /slips
 router.post('/', async (req, res) => {
   try {
-    const { clientName, clientPhone, items } = req.body;
+    const { clientName, clientPhone, clientResolution, items } = req.body;
     if (!clientName?.trim() || !clientPhone?.trim()) {
       return res.status(400).json({ error: 'Client name and phone are required' });
     }
     const itemError = validateItems(items);
     if (itemError) return res.status(400).json({ error: itemError });
 
-    // Find or create client
-    let client = await Client.findOne({ name: { $regex: new RegExp(`^${clientName.trim()}$`, 'i') } });
-    if (!client) client = await Client.create({ name: clientName.trim(), phone: clientPhone.trim() });
+    // Phone is the identity key: look up by phone first, since the same
+    // person may be entered with slightly different name spellings.
+    const trimmedName = clientName.trim();
+    const trimmedPhone = clientPhone.trim();
+    let client = await Client.findOne({
+      phone: trimmedPhone,
+      name: { $regex: new RegExp(`^${trimmedName}$`, 'i') },
+    });
+    if (!client) client = await Client.findOne({ phone: trimmedPhone });
+
+    if (client && client.name.trim().toLowerCase() !== trimmedName.toLowerCase()) {
+      if (clientResolution === 'existing') {
+        // Attach this sale to the existing customer under their stored name.
+      } else if (clientResolution === 'new') {
+        client = await Client.create({ name: trimmedName, phone: trimmedPhone });
+      } else {
+        return res.status(409).json({
+          error: 'phone_conflict',
+          message: `This phone number is already registered to "${client.name}".`,
+          existingClient: { id: client._id.toString(), name: client.name, phone: client.phone },
+        });
+      }
+    } else if (!client) {
+      client = await Client.create({ name: trimmedName, phone: trimmedPhone });
+    }
 
     const stockError = await checkAndDeductStock(items);
     if (stockError) return res.status(400).json({ error: stockError });

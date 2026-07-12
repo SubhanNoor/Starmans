@@ -8,6 +8,7 @@ export function getClients(): Promise<Client[]> {
 export interface CreateSlipPayload {
   clientName: string;
   clientPhone: string;
+  clientResolution?: 'existing' | 'new';
   items: SlipItem[];
 }
 

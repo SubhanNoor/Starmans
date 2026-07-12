@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useApp, formatCurrency, isDateInCurrentWeek, isDateInMonth, getCurrentWeekStart, getCurrentWeekEnd } from '@/context/AppContext';
 import AppLayout from '@/components/AppLayout';
-import { Search } from 'lucide-react';
+import { Search, Printer } from 'lucide-react';
 import { createPayment, getPayments } from '@/lib/payments';
 
 type TabType = 'new' | 'weekly' | 'monthly';
@@ -84,9 +84,19 @@ export default function PaymentPage() {
   const monthlyTotal = filteredMonthly.reduce((s, p) => s + p.amount, 0);
 
   return (
-    <AppLayout pageTitle="Payment">
+    <AppLayout
+      pageTitle="Payment"
+      headerAction={
+        activeTab !== 'new' ? (
+          <button onClick={() => window.print()} className="btn-navy flex items-center gap-2">
+            <Printer size={16} />
+            Print {activeTab === 'weekly' ? 'Weekly' : 'Monthly'} Payments
+          </button>
+        ) : undefined
+      }
+    >
       <div style={{ maxWidth: 860, margin: '0 auto' }}>
-        <div className="tab-pill-container mb-6">
+        <div className="tab-pill-container mb-6" data-no-print>
           <button onClick={() => setActiveTab('new')} className={activeTab === 'new' ? 'tab-pill-active' : 'tab-pill-inactive'}>New Payment</button>
           <button onClick={() => setActiveTab('weekly')} className={activeTab === 'weekly' ? 'tab-pill-active' : 'tab-pill-inactive'}>Weekly</button>
           <button onClick={() => setActiveTab('monthly')} className={activeTab === 'monthly' ? 'tab-pill-active' : 'tab-pill-inactive'}>Monthly</button>
@@ -162,7 +172,7 @@ export default function PaymentPage() {
 
         {activeTab === 'weekly' && (
           <>
-            <div className="mb-4">
+            <div className="mb-4" data-no-print>
               <div className="relative">
                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--secondary-text)' }} />
                 <input type="text" value={searchText} onChange={e => setSearchText(e.target.value)} placeholder="Search client name, phone, or method..." className="soleria-input pl-9" style={{ width: '100%', fontSize: '13px' }} />
@@ -179,7 +189,7 @@ export default function PaymentPage() {
 
         {activeTab === 'monthly' && (
           <>
-            <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-3" data-no-print>
               <div className="relative flex-1">
                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--secondary-text)' }} />
                 <input type="text" value={searchText} onChange={e => setSearchText(e.target.value)} placeholder="Search client name, phone, or method..." className="soleria-input pl-9" style={{ width: '100%', fontSize: '13px' }} />
@@ -223,7 +233,7 @@ function PaymentListView({ payments, total, title, subtitle, showCount }: {
         <span className="text-right">Amount</span>
       </div>
       {payments.map(p => (
-        <div key={p.id} className="grid gap-4 px-6 py-3 soleria-table-row items-center" style={{ gridTemplateColumns: '1fr 160px 170px 110px 120px' }}>
+        <div key={p.id} className="grid gap-4 px-6 py-3 soleria-table-row items-center print-row" style={{ gridTemplateColumns: '1fr 160px 170px 110px 120px' }}>
           <span className="font-inter font-semibold" style={{ fontSize: '13px', color: 'var(--dark-heading)' }}>{p.clientName}</span>
           <span className="font-inter" style={{ fontSize: '13px', color: 'var(--secondary-text)' }}>{p.clientPhone}</span>
           <div className="font-inter" style={{ fontSize: '13px', color: 'var(--secondary-text)' }}>

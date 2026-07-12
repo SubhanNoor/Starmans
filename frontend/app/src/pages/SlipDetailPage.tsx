@@ -5,6 +5,7 @@ import { Printer, ArrowLeft, Pencil, Trash2, X, Plus } from 'lucide-react';
 import type { SlipItem } from '@/types';
 import { updateSlip, deleteSlip, getClients } from '@/lib/slips';
 import { getArticles } from '@/lib/articles';
+import SearchableSelect from '@/components/SearchableSelect';
 
 function calcItemTotal(item: SlipItem): number {
   const subtotal = item.qty * item.price;
@@ -200,13 +201,27 @@ export default function SlipDetailPage() {
                 .reduce((total, row) => total + row.qty, 0);
               const availableForEdit = (article?.stock ?? 0) + originalQty;
               const stockExceeded = articleRemoved || Boolean(article && requestedArticleQty > availableForEdit);
+
+              const sizeOptions = Array.from(new Set(
+                state.articles
+                  .filter(a => a.name === item.name && (!item.color || a.color === item.color))
+                  .map(a => a.size)
+                  .filter(Boolean)
+              )).sort();
+              const colorOptions = Array.from(new Set(
+                state.articles
+                  .filter(a => a.name === item.name && (!item.size || a.size === item.size))
+                  .map(a => a.color)
+                  .filter(Boolean)
+              )).sort();
+
               return (
                 <div key={idx} className="soleria-table-row">
                   <div className="grid gap-3 px-5 py-3 items-start" style={{ gridTemplateColumns: '210px 48px 120px 180px 100px 30px' }}>
                     <div>
                       <select
                         value={item.name}
-                        onChange={e => updateItem(idx, { name: e.target.value })}
+                        onChange={e => updateItem(idx, { name: e.target.value, size: '', color: '' })}
                         className="soleria-input cursor-pointer"
                         style={{ fontSize: '13px', width: '100%' }}
                       >
@@ -303,21 +318,21 @@ export default function SlipDetailPage() {
                   <div className="px-5 pb-3" style={{ marginTop: -4 }}>
                     <div className="flex flex-col gap-3">
                       <div className="grid gap-3" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                        <input
-                          type="text"
-                          placeholder="Size"
+                        <SearchableSelect
                           value={item.size}
-                          onChange={e => { if (/^[0-9-]*$/.test(e.target.value)) updateItem(idx, { size: e.target.value }); }}
-                          className="soleria-input"
-                          style={{ fontSize: '12px', width: '100%' }}
+                          onChange={v => updateItem(idx, { size: v })}
+                          options={sizeOptions}
+                          placeholder="Select size..."
+                          disabled={!item.name}
+                          style={{ fontSize: '12px' }}
                         />
-                        <input
-                          type="text"
-                          placeholder="Color"
+                        <SearchableSelect
                           value={item.color}
-                          onChange={e => updateItem(idx, { color: e.target.value })}
-                          className="soleria-input"
-                          style={{ fontSize: '12px', width: '100%' }}
+                          onChange={v => updateItem(idx, { color: v })}
+                          options={colorOptions}
+                          placeholder="Select color..."
+                          disabled={!item.name}
+                          style={{ fontSize: '12px' }}
                         />
                       </div>
                       <input
@@ -354,7 +369,7 @@ export default function SlipDetailPage() {
             </div>
           </div>
         ) : (
-          <div className="card-white" style={{ padding: 40 }}>
+          <div className="card-white invoice-print" style={{ padding: 40 }}>
             {/* Header */}
             <div className="flex justify-between items-start" style={{ borderBottom: '2px solid var(--border-section)', paddingBottom: 16 }}>
               <div>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApp, formatCurrency } from '@/context/AppContext';
 import AppLayout from '@/components/AppLayout';
-import { Plus } from 'lucide-react';
+import { Plus, Printer } from 'lucide-react';
 import { createBill, getBills } from '@/lib/bills';
 
 type TabType = 'add' | 'all';
@@ -61,9 +61,19 @@ export default function BillsPage() {
   const runningTotal = entries.reduce((s, e) => s + (e.amount || 0), 0);
 
   return (
-    <AppLayout pageTitle="Bills">
+    <AppLayout
+      pageTitle="Bills"
+      headerAction={
+        activeTab === 'all' ? (
+          <button onClick={() => window.print()} className="btn-navy flex items-center gap-2">
+            <Printer size={16} />
+            Print Bills
+          </button>
+        ) : undefined
+      }
+    >
       <div style={{ maxWidth: 860, margin: '0 auto' }}>
-        <div className="tab-pill-container mb-6">
+        <div className="tab-pill-container mb-6" data-no-print>
           <button onClick={() => setActiveTab('add')} className={activeTab === 'add' ? 'tab-pill-active' : 'tab-pill-inactive'}>Add Bills</button>
           <button onClick={() => setActiveTab('all')} className={activeTab === 'all' ? 'tab-pill-active' : 'tab-pill-inactive'}>All Bills</button>
         </div>
@@ -137,12 +147,12 @@ export default function BillsPage() {
               const monthTotal = bills.reduce((s, b) => s + b.entries.reduce((es, e) => es + e.amount, 0), 0);
               return (
                 <div key={month} className="card-white">
-                  <div className="flex items-center justify-between px-6 py-3" style={{ borderBottom: '2px solid var(--border-section)' }}>
+                  <div className="flex items-center justify-between px-6 py-3 print-row" style={{ borderBottom: '2px solid var(--border-section)' }}>
                     <h4 className="font-lora font-semibold" style={{ fontSize: '16px', color: 'var(--dark-heading)' }}>{month}</h4>
                     <span className="font-lora font-semibold" style={{ fontSize: '14px', color: 'var(--brand-gold)' }}>{formatCurrency(monthTotal)}</span>
                   </div>
                   {bills.flatMap(b => b.entries).map((entry, idx) => (
-                    <div key={idx} className="grid items-center px-6 py-2.5 soleria-table-row" style={{ gridTemplateColumns: '1fr 140px' }}>
+                    <div key={idx} className="grid items-center px-6 py-2.5 soleria-table-row print-row" style={{ gridTemplateColumns: '1fr 140px' }}>
                       <span className="font-inter" style={{ fontSize: '14px', color: 'var(--primary-text)' }}>{entry.name}</span>
                       <span className="font-inter font-medium text-right whitespace-nowrap" style={{ fontSize: '14px', color: 'var(--primary-text)' }}>{formatCurrency(entry.amount)}</span>
                     </div>

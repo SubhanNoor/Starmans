@@ -60,7 +60,7 @@ export default function AppLayout({ children, pageTitle, headerAction }: AppLayo
   const isPaymentPage = currentPage.startsWith('payment');
 
   return (
-    <div className="flex h-screen w-full overflow-hidden" style={{ background: 'var(--app-bg)' }}>
+    <div className="app-shell flex h-screen w-full overflow-hidden" style={{ background: 'var(--app-bg)' }}>
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div

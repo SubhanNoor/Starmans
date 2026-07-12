@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp, formatCurrency } from '@/context/AppContext';
 import AppLayout from '@/components/AppLayout';
 import { createChemPurchase, createChemUsage, getChemPurchases, getChemUsage } from '@/lib/chemicals';
+import { Printer } from 'lucide-react';
 
 type TabType = 'manage' | 'purchases' | 'usage';
 
@@ -21,6 +22,9 @@ export default function ChemicalPage() {
   const totalPurchased = state.chemPurchases.reduce((s, p) => s + p.qty, 0);
   const totalUsed = state.chemUsage.reduce((s, u) => s + u.qty, 0);
   const remaining = totalPurchased - totalUsed;
+
+  const requestedUsageQty = usageEntries.reduce((s, e) => s + (parseFloat(e.qty) || 0), 0);
+  const exceedsRemaining = requestedUsageQty > remaining;
 
   async function handleAddPurchase() {
     if (!purchaseQty || !purchaseCost) return;
@@ -86,9 +90,19 @@ export default function ChemicalPage() {
   );
 
   return (
-    <AppLayout pageTitle="Chemical">
+    <AppLayout
+      pageTitle="Chemical"
+      headerAction={
+        activeTab !== 'manage' ? (
+          <button onClick={() => window.print()} className="btn-navy flex items-center gap-2">
+            <Printer size={16} />
+            Print {activeTab === 'purchases' ? 'Purchases' : 'Usage Log'}
+          </button>
+        ) : undefined
+      }
+    >
       <div style={{ maxWidth: 860, margin: '0 auto' }}>
-        <div className="tab-pill-container mb-6">
+        <div className="tab-pill-container mb-6" data-no-print>
           <button onClick={() => setActiveTab('manage')} className={activeTab === 'manage' ? 'tab-pill-active' : 'tab-pill-inactive'}>Manage</button>
           <button onClick={() => setActiveTab('purchases')} className={activeTab === 'purchases' ? 'tab-pill-active' : 'tab-pill-inactive'}>Purchase History</button>
           <button onClick={() => setActiveTab('usage')} className={activeTab === 'usage' ? 'tab-pill-active' : 'tab-pill-inactive'}>Usage Log</button>
@@ -151,11 +165,16 @@ export default function ChemicalPage() {
                   </div>
                 ))}
               </div>
+              {exceedsRemaining && (
+                <div className="px-5 pb-2 font-inter" style={{ fontSize: '12px', color: 'var(--error)' }}>
+                  Usage exceeds remaining stock ({remaining} kg available).
+                </div>
+              )}
               <div className="flex items-center justify-between px-5 pb-5">
                 <button onClick={addUsageRow} className="btn-dashed text-xs py-1.5 px-3">+ Add Row</button>
                 <button
                   onClick={handleAddUsage}
-                  disabled={!usageEntries.some(e => e.date && e.qty && parseFloat(e.qty) > 0) || submittingUsage}
+                  disabled={!usageEntries.some(e => e.date && e.qty && parseFloat(e.qty) > 0) || submittingUsage || exceedsRemaining}
                   className="btn-gold"
                 >
                   {submittingUsage ? 'Confirming...' : 'Confirm Usage'}
@@ -201,7 +220,7 @@ function HistoryView({ groupedData, type, filterText, setFilterText }: {
 }) {
   return (
     <>
-      <div className="mb-4" style={{ maxWidth: 380 }}>
+      <div className="mb-4" style={{ maxWidth: 380 }} data-no-print>
         <input
           type="text"
           value={filterText}
@@ -216,7 +235,7 @@ function HistoryView({ groupedData, type, filterText, setFilterText }: {
           const total = items.reduce((s: number, it: any) => s + it.qty, 0);
           return (
             <div key={month} className="card-white">
-              <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3" style={{ borderBottom: '1px solid var(--border-table)' }}>
+              <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 print-row" style={{ borderBottom: '1px solid var(--border-table)' }}>
                 <span className="font-lora font-semibold" style={{ fontSize: '15px', color: 'var(--dark-heading)' }}>{month}</span>
                 <span className="font-lora font-semibold" style={{ fontSize: '14px', color: 'var(--brand-gold)' }}>{total} kg{type === 'usage' ? ' used' : ''}</span>
               </div>
@@ -226,7 +245,7 @@ function HistoryView({ groupedData, type, filterText, setFilterText }: {
                 {type === 'purchase' && <span className="text-right">Cost</span>}
               </div>
               {items.map((it: any) => (
-                <div key={it.id} className="grid gap-4 px-5 py-4 soleria-table-row items-center" style={{ gridTemplateColumns: type === 'purchase' ? '1fr 110px 120px' : '1fr 150px' }}>
+                <div key={it.id} className="grid gap-4 px-5 py-4 soleria-table-row items-center print-row" style={{ gridTemplateColumns: type === 'purchase' ? '1fr 110px 120px' : '1fr 150px' }}>
                   <span className="font-inter" style={{ fontSize: '13px', color: 'var(--primary-text)' }}>{new Date(it.date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
                   <span className="text-right font-inter font-medium" style={{ fontSize: '13px', color: 'var(--primary-text)' }}>{it.qty} kg</span>
                   {type === 'purchase' && <span className="text-right font-inter" style={{ fontSize: '13px', color: 'var(--brand-gold)' }}>{formatCurrency(it.cost)}</span>}

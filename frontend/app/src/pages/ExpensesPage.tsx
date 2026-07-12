@@ -64,7 +64,7 @@ export default function ExpensesPage() {
       }
     >
       <div style={{ maxWidth: 860, margin: '0 auto' }}>
-        <div className="tab-pill-container mb-6">
+        <div className="tab-pill-container mb-6" data-no-print>
           <button onClick={() => setActiveTab('new')} className={activeTab === 'new' ? 'tab-pill-active' : 'tab-pill-inactive'}>New Entry</button>
           <button onClick={() => setActiveTab('weekly')} className={activeTab === 'weekly' ? 'tab-pill-active' : 'tab-pill-inactive'}>Weekly</button>
           <button onClick={() => setActiveTab('monthly')} className={activeTab === 'monthly' ? 'tab-pill-active' : 'tab-pill-inactive'}>Monthly</button>
@@ -153,7 +153,7 @@ function ReportView({ expenses, title, subtitle, emptyText, grandTotal, filterTe
   const total = filtered.reduce((s, e) => s + e.rows.reduce((rs: number, r: any) => rs + r.price, 0), 0);
   return (
     <>
-      <div className="mb-4" style={{ maxWidth: 380 }}>
+      <div className="mb-4" style={{ maxWidth: 380 }} data-no-print>
         <input
           type="text"
           value={filterText}
@@ -171,7 +171,7 @@ function ReportView({ expenses, title, subtitle, emptyText, grandTotal, filterTe
         {filtered.map(expense => {
           const expTotal = expense.rows.reduce((s: number, r: any) => s + r.price, 0);
           return (
-            <div key={expense.id} className="px-6 py-3 soleria-table-row">
+            <div key={expense.id} className="px-6 py-3 soleria-table-row print-row">
               <div className="flex items-center justify-between mb-2">
                 <span className="font-inter font-medium" style={{ fontSize: '14px', color: 'var(--secondary-text)' }}>
                   {new Date(expense.date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })} · {expense.time}

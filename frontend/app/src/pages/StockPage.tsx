@@ -10,11 +10,18 @@ const LOW_STOCK_THRESHOLD = 20;
 export default function StockPage() {
   const { state, dispatch } = useApp();
   const [search, setSearch] = useState('');
+  const [colorFilter, setColorFilter] = useState('');
+  const [maxStock, setMaxStock] = useState('');
   const [error, setError] = useState('');
 
-  const filtered = state.articles.filter(a =>
-    a.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const colors = Array.from(new Set(state.articles.map(a => a.color).filter(Boolean))).sort();
+
+  const filtered = state.articles.filter(a => {
+    if (!a.name.toLowerCase().includes(search.toLowerCase())) return false;
+    if (colorFilter && a.color !== colorFilter) return false;
+    if (maxStock !== '' && !(a.stock <= Number(maxStock))) return false;
+    return true;
+  });
 
   async function handleDelete(article: typeof state.articles[0]) {
     if (!window.confirm(`Remove ${article.name} from inventory? This cannot be undone.`)) return;
@@ -32,8 +39,8 @@ export default function StockPage() {
   return (
     <AppLayout pageTitle="Stock">
       <div style={{ maxWidth: 860, margin: '0 auto' }}>
-        {/* Search */}
-        <div className="flex items-center justify-between mb-3">
+        {/* Search & Filters */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
           <div className="relative" style={{ width: 220 }}>
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--secondary-text)' }} />
             <input
@@ -44,6 +51,34 @@ export default function StockPage() {
               className="soleria-input pl-9"
               style={{ fontSize: '13px' }}
             />
+          </div>
+          <div className="flex items-center gap-3">
+            <select
+              value={colorFilter}
+              onChange={e => setColorFilter(e.target.value)}
+              className="soleria-input cursor-pointer"
+              style={{ width: 140, fontSize: '13px' }}
+            >
+              <option value="">All Colors</option>
+              {colors.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <input
+              type="number"
+              min={0}
+              value={maxStock}
+              onChange={e => setMaxStock(e.target.value)}
+              placeholder="Stock below..."
+              className="soleria-input"
+              style={{ width: 130, fontSize: '13px' }}
+            />
+            {(colorFilter || maxStock !== '') && (
+              <button
+                onClick={() => { setColorFilter(''); setMaxStock(''); }}
+                className="btn-outline text-xs"
+              >
+                Clear
+              </button>
+            )}
           </div>
         </div>
 

@@ -6,10 +6,17 @@ import { requireAuth } from '../middleware/auth.js';
 const router = Router();
 router.use(requireAuth);
 
-// GET /articles
+// GET /articles?color=&maxStock=
 router.get('/', async (req, res) => {
   try {
-    const articles = await Article.find();
+    const { color, maxStock } = req.query;
+    const query = {};
+    if (color) query.color = color;
+    if (maxStock !== undefined && maxStock !== '') {
+      const max = Number(maxStock);
+      if (!Number.isNaN(max)) query.stock = { $lte: max };
+    }
+    const articles = await Article.find(query);
     res.json(articles);
   } catch (err) {
     res.status(500).json({ error: err.message });

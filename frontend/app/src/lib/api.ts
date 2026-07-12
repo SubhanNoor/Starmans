@@ -24,11 +24,13 @@ export function getUsernameFromToken(token: string): string | null {
   }
 }
 
-class ApiError extends Error {
+export class ApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  body: any;
+  constructor(message: string, status: number, body?: any) {
     super(message);
     this.status = status;
+    this.body = body;
   }
 }
 
@@ -44,7 +46,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    throw new ApiError(data.error || 'Request failed', res.status);
+    throw new ApiError(data.message || data.error || 'Request failed', res.status, data);
   }
   return data as T;
 }

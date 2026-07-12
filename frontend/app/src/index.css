@@ -213,6 +213,29 @@
     background: var(--alt-surface);
   }
 
+  /* Auto-width choice pill (e.g. resolving a name/phone conflict) */
+  .choice-pill-active {
+    @apply px-3 py-1.5 text-xs font-semibold cursor-pointer rounded-md whitespace-nowrap;
+    background: var(--brand-gold);
+    color: var(--brand-navy);
+    border: 1px solid var(--brand-gold);
+    font-family: 'Inter', sans-serif;
+    transition: background-color 0.15s, color 0.15s;
+  }
+
+  .choice-pill-inactive {
+    @apply px-3 py-1.5 text-xs font-medium cursor-pointer rounded-md whitespace-nowrap;
+    background: var(--card-surface);
+    color: var(--secondary-text);
+    border: 1px solid var(--border-color);
+    font-family: 'Inter', sans-serif;
+    transition: background-color 0.15s, color 0.15s;
+  }
+
+  .choice-pill-inactive:hover {
+    background: var(--alt-surface);
+  }
+
   /* Success banner */
   .banner-success {
     background: #EEF4EF;
@@ -526,10 +549,68 @@
 
   body, html {
     background: #ffffff !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .app-shell {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .app-main {
+    overflow: visible !important;
+    height: auto !important;
   }
 
   main {
     padding: 8px !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  .print-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-row {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .card-white {
+    overflow: visible !important;
+  }
+
+  @page slip-page {
+    size: 100mm 150mm;
+    margin: 5mm;
+  }
+
+  @page report-page {
+    size: 140mm 180mm;
+    margin: 5mm;
+  }
+
+  .invoice-print {
+    page: slip-page;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 !important;
+    padding: 3mm !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .report-print {
+    page: report-page;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 !important;
+    padding: 3mm !important;
+    box-shadow: none !important;
+    border: none !important;
   }
 
   @page {

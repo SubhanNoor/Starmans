@@ -174,7 +174,7 @@ export default function ProfitPage() {
       }
     >
       <div style={{ maxWidth: 860, margin: '0 auto' }}>
-        <div className="tab-pill-container mb-6">
+        <div className="tab-pill-container mb-6" data-no-print>
           <button onClick={() => setActiveTab('monthly')} className={activeTab === 'monthly' ? 'tab-pill-active' : 'tab-pill-inactive'}>Monthly</button>
           <button onClick={() => setActiveTab('annual')} className={activeTab === 'annual' ? 'tab-pill-active' : 'tab-pill-inactive'}>Annual</button>
           <button onClick={() => setActiveTab('analytics')} className={activeTab === 'analytics' ? 'tab-pill-active' : 'tab-pill-inactive'}>Analytics</button>
@@ -182,7 +182,7 @@ export default function ProfitPage() {
 
         {activeTab === 'monthly' && (
           <>
-            <div className="flex flex-col items-center gap-3 mb-6">
+            <div className="flex flex-col items-center gap-3 mb-6" data-no-print>
               <span className="font-lora font-semibold" style={{ fontSize: '22px', color: 'var(--dark-heading)' }}>
                 {getMonthName(selectedMonth)} {selectedYear}
               </span>
@@ -202,7 +202,7 @@ export default function ProfitPage() {
               </div>
             </div>
 
-            <div className="card-white p-6" style={{ maxWidth: 620, margin: '0 auto' }}>
+            <div className="card-white report-print p-6" style={{ maxWidth: 620, margin: '0 auto' }}>
               <h3 className="font-lora font-semibold" style={{ fontSize: '22px', color: 'var(--dark-heading)' }}>Monthly Profit Report</h3>
               <p className="font-inter mt-1" style={{ fontSize: '14px', color: 'var(--secondary-text)' }}>{getMonthName(selectedMonth)} {selectedYear}</p>
               <div style={{ borderBottom: '2px solid var(--border-section)', margin: '16px 0' }} />
@@ -251,7 +251,7 @@ export default function ProfitPage() {
 
         {activeTab === 'annual' && (
           <>
-            <div className="flex items-center justify-center gap-3 mb-6">
+            <div className="flex items-center justify-center gap-3 mb-6" data-no-print>
               <button onClick={() => setSelectedYear(y => y - 1)} className="btn-outline" style={{ width: 36, height: 36 }}>&larr;</button>
               <div className="card-white flex items-center justify-center font-lora font-semibold" style={{ width: 140, height: 42, fontSize: '20px', color: 'var(--dark-heading)' }}>
                 {selectedYear}
@@ -259,7 +259,7 @@ export default function ProfitPage() {
               <button onClick={() => setSelectedYear(y => y + 1)} className="btn-outline" style={{ width: 36, height: 36 }}>&rarr;</button>
             </div>
 
-            <div className="card-white p-6" style={{ maxWidth: 620, margin: '0 auto' }}>
+            <div className="card-white report-print" style={{ maxWidth: 620, margin: '0 auto', padding: 24 }}>
               <h3 className="font-lora font-semibold" style={{ fontSize: '22px', color: 'var(--dark-heading)' }}>Annual Profit Report</h3>
               <p className="font-inter mt-1" style={{ fontSize: '14px', color: 'var(--secondary-text)' }}>{selectedYear}</p>
               <div style={{ borderBottom: '2px solid var(--border-section)', margin: '16px 0' }} />

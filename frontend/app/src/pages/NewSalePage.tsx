@@ -5,6 +5,8 @@ import type { SlipItem } from '@/types';
 import { X, Plus } from 'lucide-react';
 import { createSlip, getClients } from '@/lib/slips';
 import { getArticles } from '@/lib/articles';
+import { ApiError } from '@/lib/api';
+import SearchableSelect from '@/components/SearchableSelect';
 
 function calcItemTotal(item: SlipItem): number {
   const subtotal = item.qty * item.price;
@@ -14,7 +16,7 @@ function calcItemTotal(item: SlipItem): number {
   } else if (item.discountType === 'Rs') {
     discount = item.discountAmount;
   }
-  return Math.max(0, subtotal - discount);
+  return Math.max(0, Math.round(subtotal - discount));
 }
 
 export default function NewSalePage() {
@@ -37,6 +39,28 @@ export default function NewSalePage() {
   }, [clientName, state.clients]);
 
   const isClientMatch = Boolean(existingClient);
+
+  // Phone number is the real identity key — a client with the same phone
+  // but a different (differently spelled) name needs an explicit choice.
+  const phoneMatch = useMemo(() => {
+    if (!clientPhone.trim()) return null;
+    return state.clients.find(c => c.phone === clientPhone.trim());
+  }, [clientPhone, state.clients]);
+
+  const phoneConflict = Boolean(
+    phoneMatch && clientName.trim() && phoneMatch.name.trim().toLowerCase() !== clientName.trim().toLowerCase()
+  );
+
+  const [clientResolution, setClientResolution] = useState<'existing' | 'new' | null>(null);
+
+  // Reset the resolution choice whenever the underlying conflict changes,
+  // using the render-phase adjustment pattern instead of an effect.
+  const conflictKey = `${phoneMatch?.id ?? ''}::${clientName.trim().toLowerCase()}`;
+  const [lastConflictKey, setLastConflictKey] = useState(conflictKey);
+  if (conflictKey !== lastConflictKey) {
+    setLastConflictKey(conflictKey);
+    setClientResolution(null);
+  }
 
   function updateItem(idx: number, updates: Partial<SlipItem>) {
     setFormError('');
@@ -64,6 +88,11 @@ export default function NewSalePage() {
 
     if (!clientName.trim() || !clientPhone.trim()) {
       setFormError('Client name and phone number are required.');
+      return;
+    }
+
+    if (phoneConflict && !clientResolution) {
+      setFormError('This phone number is already registered under a different name. Choose how to proceed.');
       return;
     }
 
@@ -108,7 +137,12 @@ export default function NewSalePage() {
     const validItems = items;
 
     try {
-      const created = await createSlip({ clientName, clientPhone, items: validItems }) as { no: string };
+      const created = await createSlip({
+        clientName,
+        clientPhone,
+        ...(phoneConflict && clientResolution ? { clientResolution } : {}),
+        items: validItems,
+      }) as { no: string };
 
       const [articles, clients] = await Promise.all([getArticles(), getClients()]);
       dispatch({ type: 'SET_ARTICLES', articles });
@@ -122,8 +156,13 @@ export default function NewSalePage() {
       setItems([{ name: '', qty: 1, price: 0, subtotal: 0, discountType: '%', discountAmount: 0, discountPct: 0, amount: 0, desc: '', size: '', color: '' }]);
       setClientName('');
       setClientPhone('');
+      setClientResolution(null);
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Failed to confirm sale. Please try again.');
+      if (err instanceof ApiError && err.status === 409 && err.body?.error === 'phone_conflict') {
+        setFormError(err.body.message || err.message);
+      } else {
+        setFormError(err instanceof Error ? err.message : 'Failed to confirm sale. Please try again.');
+      }
     } finally {
       isSubmitting.current = false;
       setSubmitting(false);
@@ -132,6 +171,7 @@ export default function NewSalePage() {
 
   const canConfirm = useMemo(() => {
     if (!clientName.trim() || !clientPhone.trim() || items.length === 0) return false;
+    if (phoneConflict && !clientResolution) return false;
 
     const fieldsAreValid = items.every(item => {
       const discount = item.discountType === '%' ? item.discountPct : item.discountAmount;
@@ -158,7 +198,7 @@ export default function NewSalePage() {
       const available = state.articles.find(article => article.name === articleName)?.stock ?? 0;
       return requestedQty <= available;
     });
-  }, [clientName, clientPhone, items, state.articles]);
+  }, [clientName, clientPhone, items, state.articles, phoneConflict, clientResolution]);
 
   return (
     <AppLayout pageTitle="New Sale">
@@ -192,6 +232,23 @@ export default function NewSalePage() {
               .filter(row => row.name === item.name)
               .reduce((total, row) => total + row.qty, 0);
             const stockExceeded = Boolean(article && requestedArticleQty > article.stock);
+
+            // Only sizes/colors that genuinely exist in stock for this article
+            // are selectable — narrowed further by whichever of the two is
+            // already picked, so a nonexistent size/color combo can't be sold.
+            const sizeOptions = Array.from(new Set(
+              state.articles
+                .filter(a => a.name === item.name && (!item.color || a.color === item.color))
+                .map(a => a.size)
+                .filter(Boolean)
+            )).sort();
+            const colorOptions = Array.from(new Set(
+              state.articles
+                .filter(a => a.name === item.name && (!item.size || a.size === item.size))
+                .map(a => a.color)
+                .filter(Boolean)
+            )).sort();
+
             return (
               <div key={idx} className="soleria-table-row">
                 <div className="grid gap-3 px-5 py-3 items-start" style={{ gridTemplateColumns: '210px 48px 120px 180px 100px 30px' }}>
@@ -199,7 +256,7 @@ export default function NewSalePage() {
                   <div>
                     <select
                       value={item.name}
-                      onChange={e => updateItem(idx, { name: e.target.value, price: 0 })}
+                      onChange={e => updateItem(idx, { name: e.target.value, price: 0, size: '', color: '' })}
                       className="soleria-input cursor-pointer"
                       style={{ fontSize: '13px',width: '100%' }}
                     >
@@ -323,24 +380,22 @@ export default function NewSalePage() {
     className="grid gap-3"
     style={{ gridTemplateColumns: '1fr 1fr' }}
   >
-    <input
-      type="text"
-      placeholder="Size"
+    <SearchableSelect
       value={item.size}
-      onChange={e => {
-        if (/^[0-9-]*$/.test(e.target.value)) updateItem(idx, { size: e.target.value });
-      }}
-      className="soleria-input"
-      style={{ fontSize: '12px', width: '100%' }}
+      onChange={v => updateItem(idx, { size: v })}
+      options={sizeOptions}
+      placeholder="Select size..."
+      disabled={!item.name}
+      style={{ fontSize: '12px' }}
     />
 
-    <input
-      type="text"
-      placeholder="Color"
+    <SearchableSelect
       value={item.color}
-      onChange={e => updateItem(idx, { color: e.target.value })}
-      className="soleria-input"
-      style={{ fontSize: '12px', width: '100%' }}
+      onChange={v => updateItem(idx, { color: v })}
+      options={colorOptions}
+      placeholder="Select color..."
+      disabled={!item.name}
+      style={{ fontSize: '12px' }}
     />
   </div>
 
@@ -411,6 +466,30 @@ export default function NewSalePage() {
                 />
               </div>
             </div>
+
+            {phoneConflict && phoneMatch && (
+              <div className="mt-3 rounded-lg p-3" style={{ background: '#FDFBF7', border: '1px solid #E3D9C6' }}>
+                <p className="font-inter" style={{ fontSize: '12px', color: 'var(--dark-heading)' }}>
+                  This phone number is already registered to <strong>{phoneMatch.name}</strong>. Is this the same customer?
+                </p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setClientResolution('existing')}
+                    className={clientResolution === 'existing' ? 'choice-pill-active' : 'choice-pill-inactive'}
+                  >
+                    Use "{phoneMatch.name}"
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setClientResolution('new')}
+                    className={clientResolution === 'new' ? 'choice-pill-active' : 'choice-pill-inactive'}
+                  >
+                    New customer "{clientName.trim()}"
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Total Box */}

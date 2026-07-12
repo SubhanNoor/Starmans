@@ -65,6 +65,16 @@ router.post('/usage', async (req, res) => {
     if (valid.length === 0) {
       return res.status(400).json({ error: 'At least one valid usage entry is required' });
     }
+
+    const requestedQty = valid.reduce((s, e) => s + Number(e.qty), 0);
+    const [purchases, usages] = await Promise.all([ChemPurchase.find(), ChemUsage.find()]);
+    const totalPurchased = purchases.reduce((s, p) => s + p.qty, 0);
+    const totalUsed = usages.reduce((s, u) => s + u.qty, 0);
+    const remaining = totalPurchased - totalUsed;
+    if (requestedQty > remaining) {
+      return res.status(400).json({ error: `Usage exceeds remaining stock. Only ${remaining} kg available.` });
+    }
+
     const created = await ChemUsage.insertMany(
       valid.map(e => ({ date: e.date, qty: Number(e.qty) }))
     );
