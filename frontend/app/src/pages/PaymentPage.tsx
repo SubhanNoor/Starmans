@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useApp, formatCurrency, isDateInCurrentWeek, isDateInMonth, getCurrentWeekStart, getCurrentWeekEnd } from '@/context/AppContext';
 import AppLayout from '@/components/AppLayout';
 import { Search } from 'lucide-react';
+import { createPayment, getPayments } from '@/lib/payments';
 
 type TabType = 'new' | 'weekly' | 'monthly';
 type PaymentMethod = 'Cash' | 'Cheque' | 'Online' | 'Slip';
@@ -16,6 +17,8 @@ export default function PaymentPage() {
   const [chequeDate, setChequeDate] = useState('');
   const [desc, setDesc] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [monthFilter, setMonthFilter] = useState(new Date().toISOString().slice(0, 7));
 
@@ -29,33 +32,35 @@ export default function PaymentPage() {
 
   const canConfirm = isVerified && parseInt(amount) > 0 && (method !== 'Cheque' || !!chequeDate);
 
-  function handleConfirm() {
+  async function handleConfirm() {
     if (!canConfirm || !matchedClient) return;
 
-    const now = new Date();
-    const payment = {
-      id: 'pay' + Date.now(),
-      date: now.toISOString().split('T')[0],
-      time: now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      clientId: matchedClient.id,
-      clientName: matchedClient.name,
-      clientPhone: matchedClient.phone,
-      method,
-      amount: parseInt(amount),
-      desc,
-      collectionDate: method === 'Cheque' ? now.toISOString().split('T')[0] : undefined,
-      chequeDate: method === 'Cheque' && chequeDate ? chequeDate : undefined,
-    };
-
-    dispatch({ type: 'ADD_PAYMENT', payment });
-    setClientName('');
-    setClientPhone('');
-    setAmount('');
-    setChequeDate('');
-    setDesc('');
-    setMethod('Cash');
-    setSuccessMsg('Payment recorded successfully!');
-    setTimeout(() => setSuccessMsg(''), 3000);
+    setErrorMsg('');
+    setSubmitting(true);
+    try {
+      await createPayment({
+        clientName: matchedClient.name,
+        clientPhone: matchedClient.phone,
+        method,
+        amount: parseInt(amount),
+        desc,
+        chequeDate: method === 'Cheque' ? chequeDate : undefined,
+      });
+      const payments = await getPayments();
+      dispatch({ type: 'SET_PAYMENTS', payments });
+      setClientName('');
+      setClientPhone('');
+      setAmount('');
+      setChequeDate('');
+      setDesc('');
+      setMethod('Cash');
+      setSuccessMsg('Payment recorded successfully!');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to record payment. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const weeklyPayments = state.payments.filter(p => isDateInCurrentWeek(p.date));
@@ -90,6 +95,7 @@ export default function PaymentPage() {
         {activeTab === 'new' && (
           <>
             {successMsg && <div className="banner-success rounded-lg px-4 py-3 text-sm mb-4">{successMsg}</div>}
+            {errorMsg && <div className="banner-error rounded-lg px-4 py-3 text-sm mb-4">{errorMsg}</div>}
 
             <div className="card-white p-6">
               <h3 className="font-lora font-semibold" style={{ fontSize: '20px', color: 'var(--dark-heading)' }}>Record a Payment</h3>
@@ -149,7 +155,7 @@ export default function PaymentPage() {
               </div>
 
               {/* Confirm */}
-              <button onClick={handleConfirm} className="btn-gold" disabled={!canConfirm}>Confirm Payment</button>
+              <button onClick={handleConfirm} className="btn-gold" disabled={!canConfirm || submitting}>{submitting ? 'Confirming...' : 'Confirm Payment'}</button>
             </div>
           </>
         )}

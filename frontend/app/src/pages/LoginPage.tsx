@@ -1,20 +1,31 @@
 import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
+import { login, setToken } from '@/lib/api';
 
 export default function LoginPage() {
   const { dispatch } = useApp();
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('admin');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     if (!username.trim() || !password.trim()) {
       setError('Please enter username and password.');
       return;
     }
-    dispatch({ type: 'LOGIN', payload: { username, password } });
+    setLoading(true);
+    try {
+      const { token, username: loggedInUsername } = await login(username, password);
+      setToken(token);
+      dispatch({ type: 'LOGIN_SUCCESS', payload: { username: loggedInUsername, token } });
+    } catch {
+      setError('Invalid username or password.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -156,8 +167,8 @@ export default function LoginPage() {
             {error && (
               <div className="banner-error rounded-lg px-3 py-2 text-sm">{error}</div>
             )}
-            <button type="submit" className="btn-gold w-full mt-1">
-              Log In
+            <button type="submit" className="btn-gold w-full mt-1" disabled={loading}>
+              {loading ? 'Logging in...' : 'Log In'}
             </button>
           </form>
 

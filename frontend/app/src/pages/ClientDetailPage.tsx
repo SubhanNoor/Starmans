@@ -1,9 +1,13 @@
+import { useState } from 'react';
 import { useApp, formatCurrency, getPairsSold } from '@/context/AppContext';
 import AppLayout from '@/components/AppLayout';
 import { ArrowLeft, Printer, Pencil, Trash2 } from 'lucide-react';
+import { deleteSlip, getClients } from '@/lib/slips';
+import { getArticles } from '@/lib/articles';
 
 export default function ClientDetailPage() {
   const { state, dispatch } = useApp();
+  const [error, setError] = useState('');
   const client = state.clients.find(item => item.id === state.selectedClientId);
 
   const filteredSlips = client?.slips || [];
@@ -17,10 +21,17 @@ export default function ClientDetailPage() {
     navigate('slip-detail');
   }
 
-  function handleDeleteSlip(slipId: string) {
+  async function handleDeleteSlip(slipId: string) {
     if (!client) return;
-    if (window.confirm('Delete this slip? Stock will be restored.')) {
-      dispatch({ type: 'DELETE_SLIP', clientId: client.id, slipId });
+    if (!window.confirm('Delete this slip? Stock will be restored.')) return;
+    setError('');
+    try {
+      await deleteSlip(slipId);
+      const [articles, clients] = await Promise.all([getArticles(), getClients()]);
+      dispatch({ type: 'SET_ARTICLES', articles });
+      dispatch({ type: 'SET_CLIENTS', clients });
+    } catch {
+      setError('Failed to delete slip. Please try again.');
     }
   }
 
@@ -37,6 +48,10 @@ export default function ClientDetailPage() {
       }
     >
       <div style={{ maxWidth: 760, margin: '0 auto' }}>
+        {error && (
+          <div className="banner-error rounded-lg px-3 py-2 mb-3 text-sm">{error}</div>
+        )}
+
         {/* Client info */}
         <div className="mb-6">
           <h2 className="font-lora font-semibold" style={{ fontSize: '26px', color: 'var(--dark-heading)' }}>
@@ -82,6 +97,7 @@ export default function ClientDetailPage() {
                     <Printer size={14} />
                   </button>
                   <button
+                    onClick={() => openSlip(slip.id)}
                     className="p-1.5 rounded-md transition-colors hover:bg-gray-100"
                     style={{ color: 'var(--secondary-text)' }}
                     title="Edit"

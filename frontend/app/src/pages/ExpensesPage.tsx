@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp, formatCurrency, isDateInCurrentWeek, isDateInCurrentMonth, getCurrentWeekStart, getCurrentWeekEnd } from '@/context/AppContext';
 import AppLayout from '@/components/AppLayout';
 import { Plus, Printer } from 'lucide-react';
+import { createExpense, getExpenses } from '@/lib/expenses';
 
 type TabType = 'new' | 'weekly' | 'monthly' | 'alltime';
 
@@ -10,6 +11,8 @@ export default function ExpensesPage() {
   const [activeTab, setActiveTab] = useState<TabType>('new');
   const [entries, setEntries] = useState([{ desc: '', price: 0 }]);
   const [successMsg, setSuccessMsg] = useState('');
+  const [formError, setFormError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [filterText, setFilterText] = useState('');
 
   const runningTotal = entries.reduce((s, e) => s + (e.price || 0), 0);
@@ -29,19 +32,23 @@ export default function ExpensesPage() {
     setEntries(entries.filter((_, i) => i !== idx));
   }
 
-  function handleConfirm() {
+  async function handleConfirm() {
     const valid = entries.filter(e => e.desc.trim() && e.price > 0);
     if (valid.length === 0) return;
-    const now = new Date();
-    dispatch({ type: 'ADD_EXPENSE', expense: {
-      id: 'e' + Date.now(),
-      date: now.toISOString().split('T')[0],
-      time: now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      rows: valid.map(e => ({ desc: e.desc, price: e.price }))
-    }});
-    setEntries([{ desc: '', price: 0 }]);
-    setSuccessMsg('Expenses recorded successfully!');
-    setTimeout(() => setSuccessMsg(''), 3000);
+    setFormError('');
+    setSubmitting(true);
+    try {
+      await createExpense(valid.map(e => ({ desc: e.desc, price: e.price })));
+      const expenses = await getExpenses();
+      dispatch({ type: 'SET_EXPENSES', expenses });
+      setEntries([{ desc: '', price: 0 }]);
+      setSuccessMsg('Expenses recorded successfully!');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Failed to record expenses. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -67,6 +74,7 @@ export default function ExpensesPage() {
         {activeTab === 'new' && (
           <>
             {successMsg && <div className="banner-success rounded-lg px-4 py-3 text-sm mb-4">{successMsg}</div>}
+            {formError && <div className="banner-error rounded-lg px-4 py-3 text-sm mb-4">{formError}</div>}
             <div className="card-white">
               <div className="grid gap-3 px-5 py-3 soleria-table-header" style={{ gridTemplateColumns: '1fr 140px 36px', background: 'var(--app-bg)' }}>
                 <span>Description</span>
@@ -85,7 +93,7 @@ export default function ExpensesPage() {
               </div>
             </div>
             <div className="mt-4 flex justify-end">
-              <button onClick={handleConfirm} className="btn-gold" disabled={runningTotal <= 0}>Confirm</button>
+              <button onClick={handleConfirm} className="btn-gold" disabled={runningTotal <= 0 || submitting}>{submitting ? 'Confirming...' : 'Confirm'}</button>
             </div>
           </>
         )}

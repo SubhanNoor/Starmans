@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp, formatCurrency } from '@/context/AppContext';
 import AppLayout from '@/components/AppLayout';
 import { Plus } from 'lucide-react';
+import { createBill, getBills } from '@/lib/bills';
 
 type TabType = 'add' | 'all';
 
@@ -11,6 +12,8 @@ export default function BillsPage() {
   const [billDate, setBillDate] = useState(new Date().toISOString().split('T')[0]);
   const [entries, setEntries] = useState([{ name: '', amount: 0 }]);
   const [successMsg, setSuccessMsg] = useState('');
+  const [formError, setFormError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [filterMonthYear, setFilterMonthYear] = useState('');
 
   const filteredBills = filterMonthYear
@@ -35,24 +38,24 @@ export default function BillsPage() {
     setEntries(entries.filter((_, i) => i !== idx));
   }
 
-  function handleConfirm() {
+  async function handleConfirm() {
     const validEntries = entries.filter(e => e.name.trim() && e.amount > 0);
     if (validEntries.length === 0) return;
 
-    const date = new Date(billDate);
-    const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
-    const bill = {
-      id: 'b' + Date.now(),
-      date: billDate,
-      month: monthName,
-      entries: validEntries.map(e => ({ name: e.name, amount: e.amount }))
-    };
-
-    dispatch({ type: 'ADD_BILL', bill });
-    setEntries([{ name: '', amount: 0 }]);
-    setSuccessMsg('Bills recorded successfully!');
-    setTimeout(() => setSuccessMsg(''), 3000);
+    setFormError('');
+    setSubmitting(true);
+    try {
+      await createBill(billDate, validEntries.map(e => ({ name: e.name, amount: e.amount })));
+      const bills = await getBills();
+      dispatch({ type: 'SET_BILLS', bills });
+      setEntries([{ name: '', amount: 0 }]);
+      setSuccessMsg('Bills recorded successfully!');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Failed to record bills. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const runningTotal = entries.reduce((s, e) => s + (e.amount || 0), 0);
@@ -68,6 +71,7 @@ export default function BillsPage() {
         {activeTab === 'add' && (
           <>
             {successMsg && <div className="banner-success rounded-lg px-4 py-3 text-sm mb-4">{successMsg}</div>}
+            {formError && <div className="banner-error rounded-lg px-4 py-3 text-sm mb-4">{formError}</div>}
 
             <div className="flex items-center gap-3 mb-4">
               <label className="font-inter font-semibold" style={{ fontSize: '12px', color: 'var(--dark-heading)' }}>Bill Date</label>
@@ -102,7 +106,7 @@ export default function BillsPage() {
             </div>
 
             <div className="mt-4 flex justify-end">
-              <button onClick={handleConfirm} className="btn-gold" disabled={runningTotal <= 0}>Confirm Bills</button>
+              <button onClick={handleConfirm} className="btn-gold" disabled={runningTotal <= 0 || submitting}>{submitting ? 'Confirming...' : 'Confirm Bills'}</button>
             </div>
           </>
         )}

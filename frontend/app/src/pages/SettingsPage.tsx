@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import AppLayout from '@/components/AppLayout';
+import { updateSettings } from '@/lib/settings';
+import { setToken } from '@/lib/api';
 
 export default function SettingsPage() {
   const { state, dispatch } = useApp();
@@ -9,8 +11,9 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  function handleSave() {
+  async function handleSave() {
     setSuccessMsg('');
     setErrorMsg('');
 
@@ -19,23 +22,24 @@ export default function SettingsPage() {
       return;
     }
 
-    if (newPassword && oldPassword !== state.settings.password) {
-      setErrorMsg('Old password is incorrect.');
-      return;
-    }
-
-    dispatch({
-      type: 'UPDATE_SETTINGS',
-      settings: {
+    setSaving(true);
+    try {
+      const result = await updateSettings({
         username,
-        password: newPassword || state.settings.password
-      }
-    });
-
-    setOldPassword('');
-    setNewPassword('');
-    setSuccessMsg('Settings saved successfully!');
-    setTimeout(() => setSuccessMsg(''), 3000);
+        oldPassword: oldPassword || undefined,
+        newPassword: newPassword || undefined,
+      });
+      setToken(result.token);
+      dispatch({ type: 'UPDATE_SETTINGS', settings: { username: result.username } });
+      setOldPassword('');
+      setNewPassword('');
+      setSuccessMsg('Settings saved successfully!');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to save settings. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -88,8 +92,8 @@ export default function SettingsPage() {
               />
             </div>
 
-            <button onClick={handleSave} className="btn-gold mt-2">
-              Save Changes
+            <button onClick={handleSave} className="btn-gold mt-2" disabled={saving}>
+              {saving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </div>

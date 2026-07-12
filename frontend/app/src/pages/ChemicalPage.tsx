@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp, formatCurrency } from '@/context/AppContext';
 import AppLayout from '@/components/AppLayout';
+import { createChemPurchase, createChemUsage, getChemPurchases, getChemUsage } from '@/lib/chemicals';
 
 type TabType = 'manage' | 'purchases' | 'usage';
 
@@ -12,30 +13,51 @@ export default function ChemicalPage() {
   const [purchaseCost, setPurchaseCost] = useState('');
   const [usageEntries, setUsageEntries] = useState([{ date: new Date().toISOString().split('T')[0], qty: '' }]);
   const [successMsg, setSuccessMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [submittingPurchase, setSubmittingPurchase] = useState(false);
+  const [submittingUsage, setSubmittingUsage] = useState(false);
   const [filterText, setFilterText] = useState('');
 
   const totalPurchased = state.chemPurchases.reduce((s, p) => s + p.qty, 0);
   const totalUsed = state.chemUsage.reduce((s, u) => s + u.qty, 0);
   const remaining = totalPurchased - totalUsed;
 
-  function handleAddPurchase() {
+  async function handleAddPurchase() {
     if (!purchaseQty || !purchaseCost) return;
-    dispatch({ type: 'ADD_CHEM_PURCHASE', purchase: { id: 'cp' + Date.now(), date: purchaseDate, qty: parseFloat(purchaseQty), cost: parseInt(purchaseCost) } });
-    setPurchaseQty('');
-    setPurchaseCost('');
-    setSuccessMsg('Purchase logged successfully!');
-    setTimeout(() => setSuccessMsg(''), 3000);
+    setErrorMsg('');
+    setSubmittingPurchase(true);
+    try {
+      await createChemPurchase(purchaseDate, parseFloat(purchaseQty), parseInt(purchaseCost));
+      const chemPurchases = await getChemPurchases();
+      dispatch({ type: 'SET_CHEM_PURCHASES', chemPurchases });
+      setPurchaseQty('');
+      setPurchaseCost('');
+      setSuccessMsg('Purchase logged successfully!');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to log purchase. Please try again.');
+    } finally {
+      setSubmittingPurchase(false);
+    }
   }
 
-  function handleAddUsage() {
+  async function handleAddUsage() {
     const valid = usageEntries.filter(e => e.qty && parseFloat(e.qty) > 0);
     if (valid.length === 0) return;
-    valid.forEach(e => {
-      dispatch({ type: 'ADD_CHEM_USAGE', usage: { id: 'cu' + Date.now(), date: e.date, qty: parseFloat(e.qty) } });
-    });
-    setUsageEntries([{ date: new Date().toISOString().split('T')[0], qty: '' }]);
-    setSuccessMsg('Usage logged successfully!');
-    setTimeout(() => setSuccessMsg(''), 3000);
+    setErrorMsg('');
+    setSubmittingUsage(true);
+    try {
+      await createChemUsage(valid.map(e => ({ date: e.date, qty: parseFloat(e.qty) })));
+      const chemUsage = await getChemUsage();
+      dispatch({ type: 'SET_CHEM_USAGE', chemUsage });
+      setUsageEntries([{ date: new Date().toISOString().split('T')[0], qty: '' }]);
+      setSuccessMsg('Usage logged successfully!');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to log usage. Please try again.');
+    } finally {
+      setSubmittingUsage(false);
+    }
   }
 
   function addUsageRow() {
@@ -75,6 +97,7 @@ export default function ChemicalPage() {
         {activeTab === 'manage' && (
           <>
             {successMsg && <div className="banner-success rounded-lg px-4 py-3 text-sm mb-4">{successMsg}</div>}
+            {errorMsg && <div className="banner-error rounded-lg px-4 py-3 text-sm mb-4">{errorMsg}</div>}
 
             {/* Add Purchase */}
             <div className="card-white p-5 mb-5">
@@ -94,11 +117,11 @@ export default function ChemicalPage() {
                 </div>
                 <button
                   onClick={handleAddPurchase}
-                  disabled={!purchaseDate || !purchaseQty || !purchaseCost}
+                  disabled={!purchaseDate || !purchaseQty || !purchaseCost || submittingPurchase}
                   className="btn-gold"
                   style={{ height: 42, whiteSpace: 'nowrap' }}
                 >
-                  Add Purchase
+                  {submittingPurchase ? 'Adding...' : 'Add Purchase'}
                 </button>
               </div>
             </div>
@@ -132,10 +155,10 @@ export default function ChemicalPage() {
                 <button onClick={addUsageRow} className="btn-dashed text-xs py-1.5 px-3">+ Add Row</button>
                 <button
                   onClick={handleAddUsage}
-                  disabled={!usageEntries.some(e => e.date && e.qty && parseFloat(e.qty) > 0)}
+                  disabled={!usageEntries.some(e => e.date && e.qty && parseFloat(e.qty) > 0) || submittingUsage}
                   className="btn-gold"
                 >
-                  Confirm Usage
+                  {submittingUsage ? 'Confirming...' : 'Confirm Usage'}
                 </button>
               </div>
             </div>

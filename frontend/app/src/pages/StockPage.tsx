@@ -2,20 +2,30 @@ import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import AppLayout from '@/components/AppLayout';
 import { Search, X } from 'lucide-react';
+import { deleteArticle, getArticles } from '@/lib/articles';
+import { getProductions } from '@/lib/productions';
 
 const LOW_STOCK_THRESHOLD = 20;
 
 export default function StockPage() {
   const { state, dispatch } = useApp();
   const [search, setSearch] = useState('');
+  const [error, setError] = useState('');
 
   const filtered = state.articles.filter(a =>
     a.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  function handleDelete(article: typeof state.articles[0]) {
-    if (window.confirm(`Remove ${article.name} from inventory? This cannot be undone.`)) {
-      dispatch({ type: 'DELETE_ARTICLE', id: article.id });
+  async function handleDelete(article: typeof state.articles[0]) {
+    if (!window.confirm(`Remove ${article.name} from inventory? This cannot be undone.`)) return;
+    setError('');
+    try {
+      await deleteArticle(article.id);
+      const [articles, productions] = await Promise.all([getArticles(), getProductions()]);
+      dispatch({ type: 'SET_ARTICLES', articles });
+      dispatch({ type: 'SET_PRODUCTIONS', productions });
+    } catch {
+      setError(`Failed to delete ${article.name}. Please try again.`);
     }
   }
 
@@ -36,6 +46,10 @@ export default function StockPage() {
             />
           </div>
         </div>
+
+        {error && (
+          <div className="banner-error rounded-lg px-3 py-2 mb-3 text-sm">{error}</div>
+        )}
 
         <p className="mb-4 font-inter" style={{ fontSize: '13px', color: 'var(--secondary-text)' }}>
           {state.articles.length} articles in inventory

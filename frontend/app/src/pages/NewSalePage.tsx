@@ -3,10 +3,8 @@ import { useApp, formatCurrency } from '@/context/AppContext';
 import AppLayout from '@/components/AppLayout';
 import type { SlipItem } from '@/types';
 import { X, Plus } from 'lucide-react';
-
-function generateSlipNo(): string {
-  return 'SL-' + (Math.floor(Math.random() * 9000) + 1000);
-}
+import { createSlip, getClients } from '@/lib/slips';
+import { getArticles } from '@/lib/articles';
 
 function calcItemTotal(item: SlipItem): number {
   const subtotal = item.qty * item.price;
@@ -28,6 +26,7 @@ export default function NewSalePage() {
   const [clientPhone, setClientPhone] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [formError, setFormError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const isSubmitting = useRef(false);
 
   const grandTotal = useMemo(() => items.reduce((sum, it) => sum + calcItemTotal(it), 0), [items]);
@@ -37,7 +36,7 @@ export default function NewSalePage() {
     return state.clients.find(c => c.name.toLowerCase() === clientName.toLowerCase());
   }, [clientName, state.clients]);
 
-  const isClientMatch = existingClient !== null;
+  const isClientMatch = Boolean(existingClient);
 
   function updateItem(idx: number, updates: Partial<SlipItem>) {
     setFormError('');
@@ -60,7 +59,7 @@ export default function NewSalePage() {
     setItems(items.filter((_, i) => i !== idx));
   }
 
-  function handleConfirm() {
+  async function handleConfirm() {
     if (isSubmitting.current) return;
 
     if (!clientName.trim() || !clientPhone.trim()) {
@@ -105,52 +104,30 @@ export default function NewSalePage() {
     }
 
     isSubmitting.current = true;
+    setSubmitting(true);
     const validItems = items;
 
-    const total = validItems.reduce((sum, it) => sum + calcItemTotal(it), 0);
-    const slipNo = generateSlipNo();
-    const now = new Date();
-    const dateStr = now.toISOString().split('T')[0];
-    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    try {
+      const created = await createSlip({ clientName, clientPhone, items: validItems }) as { no: string };
 
-    // Find or create client
-    let client = state.clients.find(c => c.name.toLowerCase() === clientName.toLowerCase());
-    const clientId = client?.id || ('c' + Date.now());
+      const [articles, clients] = await Promise.all([getArticles(), getClients()]);
+      dispatch({ type: 'SET_ARTICLES', articles });
+      dispatch({ type: 'SET_CLIENTS', clients });
 
-    const slip = {
-      id: 'sl' + Date.now(),
-      no: slipNo,
-      date: dateStr,
-      time: timeStr,
-      items: validItems.map(it => ({
-        ...it,
-        subtotal: it.qty * it.price,
-        amount: calcItemTotal(it)
-      })),
-      total
-    };
+      setSuccessMsg(`Sale confirmed! Slip ${created.no} created.`);
+      setFormError('');
+      setTimeout(() => setSuccessMsg(''), 3000);
 
-    if (!client) {
-      client = {
-        id: clientId,
-        name: clientName || 'Walk-in Customer',
-        phone: clientPhone,
-        slips: []
-      };
-      dispatch({ type: 'SET_CLIENTS', clients: [...state.clients, client] });
+      // Reset form
+      setItems([{ name: '', qty: 1, price: 0, subtotal: 0, discountType: '%', discountAmount: 0, discountPct: 0, amount: 0, desc: '', size: '', color: '' }]);
+      setClientName('');
+      setClientPhone('');
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Failed to confirm sale. Please try again.');
+    } finally {
+      isSubmitting.current = false;
+      setSubmitting(false);
     }
-
-    dispatch({ type: 'ADD_SLIP', clientId, slip });
-
-    setSuccessMsg(`Sale confirmed! Slip ${slipNo} created.`);
-    setFormError('');
-    setTimeout(() => setSuccessMsg(''), 3000);
-
-    // Reset form
-    setItems([{ name: '', qty: 1, price: 0, subtotal: 0, discountType: '%', discountAmount: 0, discountPct: 0, amount: 0, desc: '', size: '', color: '' }]);
-    setClientName('');
-    setClientPhone('');
-    isSubmitting.current = false;
   }
 
   const canConfirm = useMemo(() => {
@@ -466,9 +443,9 @@ export default function NewSalePage() {
           <button
             onClick={handleConfirm}
             className="btn-gold"
-            disabled={!canConfirm}
+            disabled={!canConfirm || submitting}
           >
-            Confirm Sale
+            {submitting ? 'Confirming...' : 'Confirm Sale'}
           </button>
         </div>
       </div>

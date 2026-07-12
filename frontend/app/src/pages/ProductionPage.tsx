@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import AppLayout from '@/components/AppLayout';
 import { Plus, Printer } from 'lucide-react';
+import { createArticle, getArticles } from '@/lib/articles';
+import { createProduction, getProductions } from '@/lib/productions';
 
 type TabType = 'daily' | 'weekly' | 'monthly';
 
@@ -41,17 +43,20 @@ export default function ProductionPage() {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [successMsg, setSuccessMsg] = useState('');
   const [showNewArticle, setShowNewArticle] = useState(false);
+  const [newArticleError, setNewArticleError] = useState('');
   const [newArticleName, setNewArticleName] = useState('');
   const [newArticleColor, setNewArticleColor] = useState('');
   const [newArticleSize, setNewArticleSize] = useState('');
   const [newArticleStock, setNewArticleStock] = useState('');
+  const [productionError, setProductionError] = useState('');
+  const [confirming, setConfirming] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState(getIsoWeekValue);
   const [selectedMonth, setSelectedMonth] = useState(getMonthValue);
 
   const weeklyProductions = state.productions.filter(p => isDateInSelectedWeek(p.date, selectedWeek));
   const monthlyProductions = state.productions.filter(p => p.date.slice(0, 7) === selectedMonth);
 
-  function handleConfirmProduction() {
+  async function handleConfirmProduction() {
     const entries = Object.entries(quantities)
       .filter(([, qty]) => qty > 0)
       .map(([articleId, qty]) => ({
@@ -62,44 +67,45 @@ export default function ProductionPage() {
 
     if (entries.length === 0) return;
 
-    const production = {
-      id: 'p' + Date.now(),
-      date: prodDate,
-      entries
-    };
-
-    dispatch({ type: 'ADD_PRODUCTION', production });
-    setQuantities({});
-    setSuccessMsg('Production confirmed! Stock updated.');
-    setTimeout(() => setSuccessMsg(''), 3000);
+    setProductionError('');
+    setConfirming(true);
+    try {
+      await createProduction(prodDate, entries);
+      const [articles, productions] = await Promise.all([getArticles(), getProductions()]);
+      dispatch({ type: 'SET_ARTICLES', articles });
+      dispatch({ type: 'SET_PRODUCTIONS', productions });
+      setQuantities({});
+      setSuccessMsg('Production confirmed! Stock updated.');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err) {
+      setProductionError(err instanceof Error ? err.message : 'Failed to confirm production. Please try again.');
+    } finally {
+      setConfirming(false);
+    }
   }
 
-  function handleAddNewArticle() {
+  async function handleAddNewArticle() {
     const openingQty = parseInt(newArticleStock) || 0;
     if (!newArticleName.trim() || !/^\d+(?:-\d+)*$/.test(newArticleSize) || openingQty <= 0) return;
-    const articleId = 'a' + Date.now();
-    const article = {
-      id: articleId,
-      name: newArticleName,
-      price: 0,
-      stock: 0,
-      color: newArticleColor,
-      size: newArticleSize
-    };
-    dispatch({ type: 'ADD_ARTICLE', article });
-    dispatch({
-      type: 'ADD_PRODUCTION',
-      production: {
-        id: 'p' + Date.now(),
-        date: prodDate,
-        entries: [{ articleId, articleName: newArticleName, qty: openingQty }]
-      }
-    });
-    setNewArticleName('');
-    setNewArticleColor('');
-    setNewArticleSize('');
-    setNewArticleStock('');
-    setShowNewArticle(false);
+    setNewArticleError('');
+    try {
+      const article = await createArticle({
+        name: newArticleName,
+        color: newArticleColor,
+        size: newArticleSize,
+      });
+      await createProduction(prodDate, [{ articleId: article.id, articleName: article.name, qty: openingQty }]);
+      const [articles, productions] = await Promise.all([getArticles(), getProductions()]);
+      dispatch({ type: 'SET_ARTICLES', articles });
+      dispatch({ type: 'SET_PRODUCTIONS', productions });
+      setNewArticleName('');
+      setNewArticleColor('');
+      setNewArticleSize('');
+      setNewArticleStock('');
+      setShowNewArticle(false);
+    } catch {
+      setNewArticleError('Failed to add article. Please try again.');
+    }
   }
 
   const weeklyTotals: Record<string, number> = {};
@@ -141,6 +147,7 @@ export default function ProductionPage() {
         {activeTab === 'daily' && (
           <>
             {successMsg && <div className="banner-success rounded-lg px-4 py-3 text-sm mb-4">{successMsg}</div>}
+            {productionError && <div className="banner-error rounded-lg px-4 py-3 text-sm mb-4">{productionError}</div>}
 
             <div className="flex items-center gap-3 mb-4">
               <label className="font-inter font-semibold" style={{ fontSize: '12px', color: 'var(--dark-heading)' }}>Date</label>
@@ -179,8 +186,8 @@ export default function ProductionPage() {
               <button onClick={() => setShowNewArticle(!showNewArticle)} className="btn-dashed flex items-center gap-2 text-xs">
                 <Plus size={14} /> New Article
               </button>
-              <button onClick={handleConfirmProduction} className="btn-gold">
-                Confirm Production
+              <button onClick={handleConfirmProduction} className="btn-gold" disabled={confirming}>
+                {confirming ? 'Confirming...' : 'Confirm Production'}
               </button>
             </div>
 
@@ -202,6 +209,9 @@ export default function ProductionPage() {
                   />
                   <input type="number" value={newArticleStock} onChange={e => setNewArticleStock(e.target.value)} placeholder="Opening Qty" className="soleria-input" style={{ width: '100%', minWidth: 0 }} />
                 </div>
+                {newArticleError && (
+                  <div className="banner-error rounded-lg px-3 py-2 mt-3 text-sm">{newArticleError}</div>
+                )}
                 <button onClick={handleAddNewArticle} className="btn-gold mt-3">Add Article</button>
               </div>
             )}
