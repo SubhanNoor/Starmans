@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import {
-  ShoppingCart, Receipt, Factory, Package, FileText,
+  Home as HomeIcon, ShoppingCart, Receipt, Factory, Package, FileText,
   FlaskConical, Calculator, TrendingUp, CreditCard,
   ChevronDown, LogOut, Lock, Menu, X
 } from 'lucide-react';
 
 const navItems = [
+  { page: 'home', label: 'Home', icon: HomeIcon },
   { page: 'new-sale', label: 'New Sale', icon: ShoppingCart },
   { page: 'slips', label: 'Slips', icon: Receipt },
   { page: 'production', label: 'Production', icon: Factory },
@@ -28,7 +29,16 @@ export default function AppLayout({ children, pageTitle, headerAction }: AppLayo
   const { state, dispatch } = useApp();
   const [showAdminPopup, setShowAdminPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>(
+    () => (localStorage.getItem('soleria-theme') as 'light' | 'dark') || 'light'
+  );
   const popupRef = useRef<HTMLDivElement>(null);
+
+  function toggleTheme() {
+    const next = theme === 'light' ? 'dark' : 'light';
+    setTheme(next);
+    localStorage.setItem('soleria-theme', next);
+  }
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -60,7 +70,11 @@ export default function AppLayout({ children, pageTitle, headerAction }: AppLayo
   const isPaymentPage = currentPage.startsWith('payment');
 
   return (
-    <div className="app-shell flex h-screen w-full overflow-hidden" style={{ background: 'var(--app-bg)' }}>
+    <div
+      className="app-shell flex h-screen w-full overflow-hidden"
+      data-theme={theme}
+      style={{ background: 'var(--app-bg)' }}
+    >
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -187,10 +201,10 @@ export default function AppLayout({ children, pageTitle, headerAction }: AppLayo
               className="flex items-center justify-center rounded-full flex-shrink-0"
               style={{ width: 36, height: 36, background: 'var(--brand-gold)' }}
             >
-              <span className="font-inter font-semibold text-xs" style={{ color: 'var(--brand-navy)' }}>EA</span>
+              <span className="font-inter font-semibold text-xs" style={{ color: 'var(--brand-navy)' }}>AA</span>
             </div>
             <div className="flex-1 text-left">
-              <div className="text-white font-semibold text-sm">Ehsan Ali</div>
+              <div className="text-white font-semibold text-sm">Abdul Aziz</div>
               <div style={{ color: 'var(--brand-gold)', fontSize: '11px' }}>Administrator</div>
             </div>
             <ChevronDown
@@ -245,6 +259,20 @@ export default function AppLayout({ children, pageTitle, headerAction }: AppLayo
               {pageTitle}
             </h1>
           </div>
+          <button
+            onClick={toggleTheme}
+            aria-label="Toggle dark mode"
+            className="theme-toggle-btn flex items-center justify-center rounded-full flex-shrink-0"
+            style={{
+              width: 36, height: 36,
+              border: '1px solid var(--border-color)',
+              background: 'var(--card-surface)',
+              fontSize: 16,
+            }}
+          >
+            {theme === 'light' ? '🌙' : '☀️'}
+          </button>
+
           {headerAction && (
             <div>{headerAction}</div>
           )}

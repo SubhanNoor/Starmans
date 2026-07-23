@@ -1,15 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useApp, formatCurrency, isDateInMonth, getMonthName } from '@/context/AppContext';
 import AppLayout from '@/components/AppLayout';
+import DonutChart from '@/components/DonutChart';
 import { Printer } from 'lucide-react';
 
 type TabType = 'monthly' | 'annual' | 'analytics';
-
-const EXPENSE_COLORS = {
-  operating: '#B08D57',
-  bills: '#4A7FC1',
-  chemical: '#3F7D58'
-};
 
 export default function ProfitPage() {
   const { state } = useApp();
@@ -107,59 +102,6 @@ export default function ProfitPage() {
       .reduce((s, c) => s + c.cost, 0);
     return { operating: opExp, bills: utilBills, chemical: chemCost };
   }, [state, analyticsYear]);
-
-  function getSlices(data: { operating: number; bills: number; chemical: number }) {
-    return [
-      { value: data.operating, color: EXPENSE_COLORS.operating, label: 'Operating Expenses' },
-      { value: data.bills, color: EXPENSE_COLORS.bills, label: 'Utility Bills' },
-      { value: data.chemical, color: EXPENSE_COLORS.chemical, label: 'Chemical' },
-    ];
-  }
-
-  function renderPieOnly(data: { operating: number; bills: number; chemical: number }, size: number = 180) {
-    const total = data.operating + data.bills + data.chemical;
-    const radius = size / 2 - 4;
-    const cx = size / 2;
-    const cy = size / 2;
-
-    if (total === 0) {
-      return <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}><circle cx={cx} cy={cy} r={radius} fill="var(--border-table)" /></svg>;
-    }
-
-    const slices = getSlices(data);
-    let currentAngle = -Math.PI / 2;
-    const paths = slices.filter(s => s.value > 0).map((slice, i) => {
-      const angle = (slice.value / total) * Math.PI * 2;
-      const x1 = cx + radius * Math.cos(currentAngle);
-      const y1 = cy + radius * Math.sin(currentAngle);
-      const x2 = cx + radius * Math.cos(currentAngle + angle);
-      const y2 = cy + radius * Math.sin(currentAngle + angle);
-      const largeArc = angle > Math.PI ? 1 : 0;
-      const d = `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
-      currentAngle += angle;
-      return <path key={i} d={d} fill={slice.color} stroke="white" strokeWidth={2} />;
-    });
-
-    return <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>{paths}</svg>;
-  }
-
-  function renderLegend(data: { operating: number; bills: number; chemical: number }) {
-    const total = data.operating + data.bills + data.chemical;
-    const slices = getSlices(data).filter(s => s.value > 0);
-    return (
-      <div className="flex flex-col gap-3">
-        {slices.map((s, i) => (
-          <div key={i} className="flex items-start gap-2">
-            <div className="rounded-sm mt-1" style={{ width: 12, height: 12, background: s.color, flexShrink: 0 }} />
-            <div>
-              <p className="font-inter font-semibold" style={{ fontSize: '14px', color: 'var(--dark-heading)' }}>{s.label}</p>
-              <p className="font-inter" style={{ fontSize: '13px', color: 'var(--secondary-text)' }}>{formatCurrency(s.value)} · {Math.round((s.value / total) * 100)}%</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
 
   return (
     <AppLayout
@@ -315,41 +257,27 @@ export default function ProfitPage() {
               return (
                 <div className="flex flex-col gap-6">
                   <div className="card-white p-6">
-                    <h4 className="font-lora font-semibold" style={{ fontSize: '18px', color: 'var(--dark-heading)' }}>
-                      Monthly Breakdown — {getMonthName(analyticsMonth).slice(0, 3)} {analyticsYear}
+                    <h4 className="font-lora font-semibold mb-6" style={{ fontSize: '18px', color: 'var(--dark-heading)' }}>
+                      Monthly Breakdown
                     </h4>
-                    <p className="font-inter mt-1" style={{ fontSize: '13px', color: 'var(--secondary-text)' }}>
-                      Gross sales {formatCurrency(analyticsMonthlyGross)} — expense breakdown
-                    </p>
-                    <div className="flex items-center gap-8 mt-6">
-                      {renderPieOnly(analyticsMonthly)}
-                      {monthlyExpTotal === 0 ? (
-                        <span className="font-inter" style={{ fontSize: '14px', color: 'var(--muted-text)' }}>No sales recorded this month.</span>
-                      ) : renderLegend(analyticsMonthly)}
-                    </div>
-                    <div className="flex justify-between items-center pt-4 mt-4" style={{ borderTop: '1px solid var(--border-table)' }}>
-                      <span className="font-inter uppercase font-semibold tracking-wider" style={{ fontSize: '11px', color: 'var(--secondary-text)', letterSpacing: '0.6px' }}>Net Profit</span>
-                      <span className="font-lora font-semibold" style={{ fontSize: '22px', color: 'var(--brand-gold)' }}>{formatCurrency(monthlyNet)}</span>
-                    </div>
+                    <DonutChart
+                      periodLabel={`${getMonthName(analyticsMonth).slice(0, 3)} ${analyticsYear}`}
+                      grossSales={analyticsMonthlyGross}
+                      data={analyticsMonthly}
+                      net={monthlyNet}
+                    />
                   </div>
 
                   <div className="card-white p-6">
-                    <h4 className="font-lora font-semibold" style={{ fontSize: '18px', color: 'var(--dark-heading)' }}>
-                      Annual Breakdown — {analyticsYear}
+                    <h4 className="font-lora font-semibold mb-6" style={{ fontSize: '18px', color: 'var(--dark-heading)' }}>
+                      Annual Breakdown
                     </h4>
-                    <p className="font-inter mt-1" style={{ fontSize: '13px', color: 'var(--secondary-text)' }}>
-                      Gross sales {formatCurrency(analyticsAnnualGross)} — expense breakdown
-                    </p>
-                    <div className="flex items-center gap-8 mt-6">
-                      {renderPieOnly(analyticsAnnual)}
-                      {annualExpTotal === 0 ? (
-                        <span className="font-inter" style={{ fontSize: '14px', color: 'var(--muted-text)' }}>No expenses recorded this year.</span>
-                      ) : renderLegend(analyticsAnnual)}
-                    </div>
-                    <div className="flex justify-between items-center pt-4 mt-4" style={{ borderTop: '1px solid var(--border-table)' }}>
-                      <span className="font-inter uppercase font-semibold tracking-wider" style={{ fontSize: '11px', color: 'var(--secondary-text)', letterSpacing: '0.6px' }}>Net Profit</span>
-                      <span className="font-lora font-semibold" style={{ fontSize: '22px', color: 'var(--brand-gold)' }}>{formatCurrency(annualNet)}</span>
-                    </div>
+                    <DonutChart
+                      periodLabel={`${analyticsYear}`}
+                      grossSales={analyticsAnnualGross}
+                      data={analyticsAnnual}
+                      net={annualNet}
+                    />
                   </div>
                 </div>
               );

@@ -1,5 +1,6 @@
 import { useApp } from '@/context/AppContext';
 import LoginPage from '@/pages/LoginPage';
+import Home from '@/pages/Home';
 import NewSalePage from '@/pages/NewSalePage';
 import SlipsPage from '@/pages/SlipsPage';
 import ClientDetailPage from '@/pages/ClientDetailPage';
@@ -22,6 +23,9 @@ export default function App() {
   }
 
   const page = state.currentPage;
+
+  // Home
+  if (page === 'home') return <Home />;
 
   // Slips pages
   if (page.startsWith('slips')) return <SlipsPage />;

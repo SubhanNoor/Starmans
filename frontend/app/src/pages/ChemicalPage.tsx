@@ -192,7 +192,7 @@ export default function ChemicalPage() {
                 <p className="font-inter uppercase tracking-wider mb-1" style={{ fontSize: '10px', color: 'var(--secondary-text)', letterSpacing: '0.6px' }}>Total Used</p>
                 <p className="font-lora font-semibold" style={{ fontSize: '28px', color: 'var(--dark-heading)' }}>{totalUsed} <span style={{ fontSize: '16px' }}>kg</span></p>
               </div>
-              <div className="p-4 text-center rounded-lg" style={{ background: 'var(--dark-heading)' }}>
+              <div className="p-4 text-center rounded-lg" style={{ background: 'var(--brand-navy)' }}>
                 <p className="font-inter uppercase tracking-wider mb-1" style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', letterSpacing: '0.6px' }}>Remaining</p>
                 <p className="font-lora font-semibold" style={{ fontSize: '28px', color: 'var(--brand-gold)' }}>{remaining} <span style={{ fontSize: '16px' }}>kg</span></p>
               </div>

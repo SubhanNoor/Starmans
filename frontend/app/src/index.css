@@ -25,6 +25,21 @@
     --border-table: #F0EDE6;
     --border-section: #1B2A41;
     --sidebar-sep: rgba(255,255,255,0.08);
+    /* Fixed light text for use on always-navy surfaces (buttons/active pills) — must stay
+       readable regardless of theme, unlike --app-bg which flips to near-black in dark mode. */
+    --text-on-navy: #FAF8F3;
+  }
+
+  [data-theme="dark"] {
+    --app-bg: #0d1520;
+    --card-surface: #162030;
+    --alt-surface: #111a28;
+    --border-color: #253448;
+    --border-table: #1a2a3a;
+    --primary-text: #d4cfc8;
+    --secondary-text: #7a8fa8;
+    --muted-text: #4a6278;
+    --dark-heading: #eee8dd;
 
     /* shadcn overrides */
     --background: 40 33% 97%;
@@ -121,7 +136,7 @@
   .btn-navy {
     @apply px-5 py-2 rounded-lg font-semibold text-sm transition-colors;
     background: var(--brand-navy);
-    color: var(--app-bg);
+    color: var(--text-on-navy);
     font-family: 'Inter', sans-serif;
   }
 
@@ -133,7 +148,7 @@
   .btn-dashed {
     @apply px-4 py-2 rounded-md font-semibold text-sm transition-colors border border-dashed;
     border-color: #C9C4B8;
-    color: var(--brand-navy);
+    color: var(--dark-heading);
     background: transparent;
     font-family: 'Inter', sans-serif;
   }
@@ -146,14 +161,14 @@
   /* Dark outline button */
   .btn-outline {
     @apply px-4 py-2 rounded-md font-semibold text-sm transition-colors border;
-    border-color: var(--brand-navy);
-    color: var(--brand-navy);
+    border-color: var(--dark-heading);
+    color: var(--dark-heading);
     background: transparent;
     font-family: 'Inter', sans-serif;
   }
 
   .btn-outline:hover {
-    background: rgba(27,42,65,0.06);
+    background: var(--alt-surface);
   }
 
   /* Danger button */
@@ -198,14 +213,14 @@
   .tab-pill-active {
     @apply px-4 py-2 text-sm font-semibold border-none cursor-pointer;
     background: var(--brand-navy);
-    color: var(--app-bg);
+    color: var(--text-on-navy);
     font-family: 'Inter', sans-serif;
   }
 
   .tab-pill-inactive {
     @apply px-4 py-2 text-sm font-medium border-none cursor-pointer;
     background: var(--card-surface);
-    color: var(--brand-navy);
+    color: var(--dark-heading);
     font-family: 'Inter', sans-serif;
   }
 
@@ -255,7 +270,7 @@
     background: var(--card-surface);
     border: 1px solid var(--brand-gold);
     border-left: 3px solid var(--brand-gold);
-    color: var(--brand-navy);
+    color: var(--dark-heading);
   }
 
   /* Verified banner */
@@ -294,7 +309,7 @@
   .tag-pill {
     @apply px-2.5 py-0.5 rounded-full text-xs font-medium;
     background: var(--alt-surface);
-    color: var(--brand-navy);
+    color: var(--dark-heading);
     border: 1px solid var(--border-color);
   }
 
@@ -307,6 +322,28 @@
   .solera-pulse {
     animation: solera-pulse 2.8s ease-in-out infinite;
     transform-origin: left;
+  }
+
+  /* Home page stat card hover zoom */
+  .home-stat-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .home-stat-card:hover {
+    transform: scale(1.04);
+    box-shadow: 0 10px 28px rgba(27,42,65,0.12);
+  }
+
+  .home-stat-card-danger:hover {
+    border-color: var(--error) !important;
+  }
+
+  .theme-toggle-btn {
+    transition: border-color 0.15s;
+  }
+
+  .theme-toggle-btn:hover {
+    border-color: var(--brand-gold);
   }
 }
 

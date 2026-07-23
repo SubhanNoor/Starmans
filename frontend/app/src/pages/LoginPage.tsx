@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { login, setToken } from '@/lib/api';
+import DotField from '@/components/DotField';
 
 export default function LoginPage() {
   const { dispatch } = useApp();
@@ -30,16 +31,18 @@ export default function LoginPage() {
 
   return (
     <div
-      className="flex items-center justify-center min-h-screen login-page-outer"
+      className="relative flex items-center justify-center min-h-screen login-page-outer"
       style={{ background: 'var(--app-bg)' }}
     >
+      <DotField />
       <div
-        className="flex w-full overflow-hidden login-card"
+        className="relative flex w-full overflow-hidden login-card"
         style={{
           maxWidth: 960,
           minHeight: 480,
           borderRadius: 14,
           boxShadow: '0 30px 70px rgba(27,42,65,0.14)',
+          zIndex: 1,
         }}
       >
         {/* Left branded panel */}

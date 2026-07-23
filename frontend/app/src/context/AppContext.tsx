@@ -53,7 +53,7 @@ const existingToken = getToken();
 const initialState: State = {
   isLoggedIn: !!existingToken,
   token: existingToken,
-  currentPage: existingToken ? 'new-sale' : 'login',
+  currentPage: existingToken ? 'home' : 'login',
   selectedClientId: null,
   selectedSlipId: null,
   articles: [],
@@ -75,7 +75,7 @@ function reducer(state: State, action: Action): State {
         ...state,
         isLoggedIn: true,
         token,
-        currentPage: 'new-sale',
+        currentPage: 'home',
         settings: { ...state.settings, username },
       };
     }
