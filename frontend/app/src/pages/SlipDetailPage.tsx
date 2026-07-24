@@ -36,7 +36,18 @@ export default function SlipDetailPage() {
   }
 
   function handlePrint() {
-    window.print();
+    const el = document.querySelector('.invoice-print') as HTMLElement | null;
+    if (el) {
+      const heightMm = Math.ceil(el.scrollHeight / 3.7795) + 15;
+      const style = document.createElement('style');
+      style.id = 'dynamic-print-page';
+      style.textContent = `@page { size: 100mm ${heightMm}mm !important; margin: 5mm !important; }`;
+      document.head.appendChild(style);
+      window.print();
+      document.head.removeChild(style);
+    } else {
+      window.print();
+    }
   }
 
   async function handleDelete() {

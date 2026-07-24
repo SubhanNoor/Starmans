@@ -103,12 +103,27 @@ export default function ProfitPage() {
     return { operating: opExp, bills: utilBills, chemical: chemCost };
   }, [state, analyticsYear]);
 
+  function handlePrint() {
+    const el = document.querySelector('.report-print') as HTMLElement | null;
+    if (el) {
+      const heightMm = Math.ceil(el.scrollHeight / 3.7795) + 15;
+      const style = document.createElement('style');
+      style.id = 'dynamic-print-page';
+      style.textContent = `@page { size: 140mm ${heightMm}mm !important; margin: 5mm !important; }`;
+      document.head.appendChild(style);
+      window.print();
+      document.head.removeChild(style);
+    } else {
+      window.print();
+    }
+  }
+
   return (
     <AppLayout
       pageTitle="Profit"
       headerAction={
         activeTab !== 'analytics' ? (
-          <button onClick={() => window.print()} className="btn-navy flex items-center gap-2">
+          <button onClick={handlePrint} className="btn-navy flex items-center gap-2">
             <Printer size={16} />
             Print Report
           </button>

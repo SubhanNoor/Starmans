@@ -28,20 +28,8 @@
     /* Fixed light text for use on always-navy surfaces (buttons/active pills) — must stay
        readable regardless of theme, unlike --app-bg which flips to near-black in dark mode. */
     --text-on-navy: #FAF8F3;
-  }
 
-  [data-theme="dark"] {
-    --app-bg: #0d1520;
-    --card-surface: #162030;
-    --alt-surface: #111a28;
-    --border-color: #253448;
-    --border-table: #1a2a3a;
-    --primary-text: #d4cfc8;
-    --secondary-text: #7a8fa8;
-    --muted-text: #4a6278;
-    --dark-heading: #eee8dd;
-
-    /* shadcn overrides */
+    /* shadcn base variables */
     --background: 40 33% 97%;
     --foreground: 0 0% 17%;
     --card: 0 0% 100%;
@@ -60,6 +48,40 @@
     --destructive-foreground: 0 0% 98%;
     --border: 37 14% 87%;
     --input: 37 14% 87%;
+    --ring: 37 37% 52%;
+    --radius: 0.625rem;
+  }
+
+  [data-theme="dark"] {
+    --app-bg: #0d1520;
+    --card-surface: #162030;
+    --alt-surface: #111a28;
+    --border-color: #253448;
+    --border-table: #1a2a3a;
+    --primary-text: #d4cfc8;
+    --secondary-text: #7a8fa8;
+    --muted-text: #4a6278;
+    --dark-heading: #eee8dd;
+
+    /* dark mode shadcn overrides */
+    --background: 216 40% 10%;
+    --foreground: 40 33% 97%;
+    --card: 216 40% 14%;
+    --card-foreground: 40 33% 97%;
+    --popover: 216 40% 14%;
+    --popover-foreground: 40 33% 97%;
+    --primary: 37 37% 52%;
+    --primary-foreground: 216 40% 18%;
+    --secondary: 216 30% 20%;
+    --secondary-foreground: 40 33% 97%;
+    --muted: 216 30% 20%;
+    --muted-foreground: 43 5% 70%;
+    --accent: 37 37% 52%;
+    --accent-foreground: 216 40% 18%;
+    --destructive: 14 71% 41%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 216 30% 25%;
+    --input: 216 30% 25%;
     --ring: 37 37% 52%;
     --radius: 0.625rem;
   }
@@ -587,23 +609,35 @@
   body, html {
     background: #ffffff !important;
     height: auto !important;
+    min-height: 0 !important;
     overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
-  .app-shell {
-    height: auto !important;
-    overflow: visible !important;
-  }
-
-  .app-main {
-    overflow: visible !important;
-    height: auto !important;
-  }
-
+  /* Kill ALL flex sizing so containers shrink-wrap to content */
+  .app-shell,
+  .app-shell > div,
+  .app-main,
   main {
-    padding: 8px !important;
-    overflow: visible !important;
+    display: block !important;
     height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    flex: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  .app-sidebar,
+  .app-sidebar-overlay {
+    display: none !important;
+  }
+
+  .app-main-inner {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   .print-section {
@@ -620,28 +654,8 @@
     overflow: visible !important;
   }
 
-  @page slip-page {
-    size: 100mm 150mm;
-    margin: 5mm;
-  }
-
-  @page report-page {
-    size: 140mm 180mm;
-    margin: 5mm;
-  }
-
-  .invoice-print {
-    page: slip-page;
-    width: 100%;
-    max-width: 100%;
-    margin: 0 !important;
-    padding: 3mm !important;
-    box-shadow: none !important;
-    border: none !important;
-  }
-
+  .invoice-print,
   .report-print {
-    page: report-page;
     width: 100%;
     max-width: 100%;
     margin: 0 !important;
@@ -651,6 +665,6 @@
   }
 
   @page {
-    margin: 8mm;
+    margin: 5mm;
   }
 }

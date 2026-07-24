@@ -23,3 +23,5 @@ dist-ssr
 *.sln
 *.sw?
 .env
+Backend/create-admin.js
+Backend/wipe-data.js
