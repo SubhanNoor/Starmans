@@ -240,7 +240,12 @@ export default function AppLayout({ children, pageTitle, headerAction }: AppLayo
             <div className="flex flex-col gap-1 brand-mark">
               <span
                 className="font-lora uppercase tracking-widest"
-                style={{ fontSize: '12.5px', letterSpacing: '2.5px', color: 'var(--brand-navy)' }}
+                style={{
+                  fontSize: '12.5px',
+                  letterSpacing: '2.5px',
+                  color: theme === 'dark' ? '#ffffff' : 'var(--brand-navy)',
+                  transition: 'color 0.2s',
+                }}
               >
                 STARMANS
               </span>

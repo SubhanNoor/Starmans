@@ -5,8 +5,8 @@ import DotField from '@/components/DotField';
 
 export default function LoginPage() {
   const { dispatch } = useApp();
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -124,7 +124,7 @@ export default function LoginPage() {
           className="flex flex-col justify-center login-form-panel"
           style={{
             flex: '0 0 50%',
-            background: '#ffffff',
+            background: 'var(--card-surface)',
             padding: '48px 44px',
           }}
         >
@@ -174,13 +174,6 @@ export default function LoginPage() {
               {loading ? 'Logging in...' : 'Log In'}
             </button>
           </form>
-
-          <p
-            className="mt-5 text-center font-inter"
-            style={{ fontSize: '13px', color: 'var(--muted-text)' }}
-          >
-            Demo credentials are pre-filled — just press Log In.
-          </p>
         </div>
       </div>
     </div>

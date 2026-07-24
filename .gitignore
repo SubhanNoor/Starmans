@@ -23,8 +23,11 @@ dist-ssr
 *.sln
 *.sw?
 .env
+Backend/create-admin.js
+Backend/wipe-data.js
 
 # Stray root-level files not part of the project (accidentally committed once)
 /package.json
 /package-lock.json
 frontend_images/Screenshot from *.png
+
