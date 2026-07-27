@@ -31,3 +31,4 @@ Backend/wipe-data.js
 /package-lock.json
 frontend_images/Screenshot from *.png
 
+frontend/app/.env
